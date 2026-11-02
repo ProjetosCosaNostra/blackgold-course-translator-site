@@ -221,7 +221,10 @@
    const language=typeof track.language==="string"?track.language.trim().toLowerCase().replace(/_/g,"-").split("-")[0]:"";
    const matching=language===sourceBase;
    if(track.mode==="showing"&&language&&!matching)wrongLanguageShowing=true;
+   // Never translate an unidentified or hidden track when a different
+   // language is visibly selected; avoid mixing captions from two languages.
    if(language&&!matching)continue;
+   if(!language&&track.mode!=="showing")continue;
    const active=track.activeCues?Array.from(track.activeCues):[];
    const text=active.map(c=>String(c.text||"").replace(/<[^>]*>/g,"")).filter(Boolean).join("\n").trim();
    if(!text)continue;
@@ -235,7 +238,7 @@
   }
   // Exact source-language match takes precedence over unidentified tracks.
   options.sort((a,b)=>b.priority-a.priority);
-  return {cue:options[0]?.cue||null,wrongLanguageShowing};
+  return {cue:wrongLanguageShowing?null:options[0]?.cue||null,wrongLanguageShowing};
  }
  function cueFromDom(){
   const node=document.querySelector(captionSelector);
