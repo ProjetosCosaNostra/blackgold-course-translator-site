@@ -182,6 +182,11 @@ async function main(){
  }
  const nativeProbe=await isolated("({type:typeof globalThis.Translator,availability:typeof globalThis.Translator?.availability,create:typeof globalThis.Translator?.create})");
  console.log("BGCT NATIVE API PASSIVE PROBE (no model download): "+JSON.stringify(nativeProbe));
+ if(nativeProbe.availability==="function"){
+  const nativePairStatus=await isolated("(async()=>{try{return await globalThis.Translator.availability({sourceLanguage:'en',targetLanguage:'pt'})}catch(e){return 'error:'+String(e?.name||'unknown')}})()");
+  console.log("BGCT NATIVE EN->PT AVAILABILITY ONLY (no model create/download): "+JSON.stringify(nativePairStatus));
+  assert.equal(typeof nativePairStatus,"string","Native availability should return a status string");
+ }
  const mockScript=String.raw`
  (()=>{
   const mock={availability:[],created:0,destroyed:0,requests:[]};
