@@ -37,3 +37,10 @@ Full original extension source, real Chrome/Edge tests, actual Udemy caption int
 - A mudança de aula com o mesmo par de idiomas preserva a sessão local já carregada; a troca de par de idiomas precisa resetar a sessão.
 - Ferramentas de QA: check-translator-api.mjs e check-caption-coordinator.mjs, executadas no GitHub Actions (simulações, não navegador real).
 - **Sem integração com a extensão instalada**: só módulos preparados; não afirmar que a sincronização de Udemy foi consertada. É necessário revisar selectors e contrato de cue reais no content.js original.
+
+
+## Cancelamento de criação do modelo (02/11/2026)
+- `Translator.create()` recebe um `AbortSignal` disponível. Ao executar reset ou trocar o par de idiomas, o módulo cancela a criação/download em andamento. O modelo criado é destruído com `destroy()`; os pedidos atrasados continuam protegidos pelo identificador de geração.
+- `cancelPending()` cancela apenas a tradução atual sem descartar o modelo. O sinal da sessão não é cancelado a cada legenda.
+- Testes simulados de cancelamento da criação e liberação do modelo incluídos; não comprova compatibilidade da extensão real.
+- Fontes: https://developer.mozilla.org/en-US/docs/Web/API/Translator/create_static ; https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api .

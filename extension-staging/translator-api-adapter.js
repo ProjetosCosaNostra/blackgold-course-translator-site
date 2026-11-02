@@ -8,7 +8,7 @@ function makeRuntime(config={}){
  const getCtor=()=>Object.prototype.hasOwnProperty.call(config,"TranslatorCtor")?config.TranslatorCtor:root.Translator;
  const onState=typeof config.onState==="function"?config.onState:()=>{};
  const onProgress=typeof config.onProgress==="function"?config.onProgress:()=>{};
- let generation=0,translationRevision=0,pending=null,active=null,activeAbort=null,currentState="idle";
+ let generation=0,translationRevision=0,pending=null,active=null,activeAbort=null,setupAbort=null,currentState="idle";
  function inform(state,detail={}){
   if(!states.has(state))throw new Error("Unsupported translator state: "+state);
   currentState=state;
@@ -19,7 +19,8 @@ function makeRuntime(config={}){
   const controller=activeAbort;activeAbort=null;
   if(controller&&typeof controller.abort==="function"){try{controller.abort()}catch{/* already stopped */}}
  }
- function invalidate(){generation++;translationRevision++;stopTranslation();pending=null;destroyActive();return generation}
+ function abortSetup(){const c=setupAbort;setupAbort=null;if(c&&typeof c.abort==="function"){try{c.abort()}catch{/* already terminated */}}}
+ function invalidate(){generation++;translationRevision++;stopTranslation();abortSetup();pending=null;destroyActive();return generation}
  function cancelPending(){translationRevision++;stopTranslation();if(active)inform("ready")}
  function reset(){invalidate();inform("idle")}
  function supported(){
@@ -60,11 +61,17 @@ function makeRuntime(config={}){
   inform(task.availability==="available"?"loading":"downloading",{availability:task.availability});
   let promise;
   let downloadOpen=true;
+  const Controller=Object.prototype.hasOwnProperty.call(config,"AbortControllerCtor")
+   ?config.AbortControllerCtor:root.AbortController;
+  let createController=null;
+  if(typeof Controller==="function"){try{createController=new Controller()}catch{/* use sequence fallback */}}
+  setupAbort=createController;
   try{
    // The create() call occurs synchronously before the async function first yields.
    promise=getCtor().create({
     sourceLanguage:task.sourceLanguage,
     targetLanguage:task.targetLanguage,
+    ...(createController?{signal:createController.signal}:{}),
     monitor(observer){
      if(!observer||typeof observer.addEventListener!=="function")return;
      observer.addEventListener("downloadprogress",event=>{
@@ -79,16 +86,17 @@ function makeRuntime(config={}){
      });
     }
    });
-  }catch{downloadOpen=false;if(token===generation)inform("error",{reason:"create-failed"});return {ok:false,code:"create-failed"}}
+  }catch{downloadOpen=false;if(token===generation){abortSetup();inform("error",{reason:"create-failed"})}return {ok:false,code:"create-failed"}}
   let translator;
   try{translator=await promise}
-  catch{downloadOpen=false;if(token!==generation)return {ok:false,code:"stale"};inform("error",{reason:"create-failed"});return {ok:false,code:"create-failed"}}
+  catch{downloadOpen=false;if(token!==generation)return {ok:false,code:"stale"};abortSetup();inform("error",{reason:"create-failed"});return {ok:false,code:"create-failed"}}
   downloadOpen=false;
   if(token!==generation){
    try{translator?.destroy?.()}catch{}
    return {ok:false,code:"stale"};
   }
   if(!translator||typeof translator.translate!=="function"){
+   abortSetup();
    try{translator?.destroy?.()}catch{}
    inform("error",{reason:"invalid-session"});
    return {ok:false,code:"invalid-session"};

@@ -61,12 +61,28 @@ const rt2=make({TranslatorCtor:immediate.T});
 assert.equal((await rt2.inspect("en","es")).availability,"available");
 assert.equal((await rt2.startFromGesture()).code,"ready");
 assert.equal(immediate.creates,1);
-let resolveCreate;let destroyedStale=0;
-const late=sampleCtor("downloadable",{create:()=>new Promise(resolve=>{resolveCreate=resolve})});
+let liveCreateSignal,liveSessionDestroy=0;
+const finishedSession=make({TranslatorCtor:{
+ availability:async()=>"available",
+ create(options){
+  liveCreateSignal=options.signal;
+  return Promise.resolve({translate:async text=>text,destroy(){liveSessionDestroy++}});
+ }
+}});
+await finishedSession.inspect("en","es");
+assert.equal((await finishedSession.startFromGesture()).code,"ready");
+assert.equal(liveCreateSignal.aborted,false,"Successful model remains active until reset");
+finishedSession.reset();
+assert.equal(liveCreateSignal.aborted,true,"Reset releases successful model signal");
+assert.equal(liveSessionDestroy,1,"Reset destroys successful model");
+let resolveCreate;let destroyedStale=0;let pendingCreateSignal;
+const late=sampleCtor("downloadable",{create:options=>{pendingCreateSignal=options.signal;return new Promise(resolve=>{resolveCreate=resolve})}});
 const rt3=make({TranslatorCtor:late.T});
 await rt3.inspect("en","pt");
 const outdated=rt3.startFromGesture();
+assert.equal(pendingCreateSignal.aborted,false,"Create signal is live before reset");
 rt3.reset();
+assert.equal(pendingCreateSignal.aborted,true,"Reset must cancel in-flight model creation");
 resolveCreate({async translate(t){return t},destroy(){destroyedStale++}});
 assert.equal((await outdated).code,"stale");
 assert.equal(destroyedStale,1,"Stale session must be released");
