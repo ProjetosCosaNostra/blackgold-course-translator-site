@@ -264,6 +264,17 @@ async function main(){
   "large course player reselected when it becomes visible",5000);
  await isolated("document.getElementById('bgct-smoke-preview').remove();true");
  console.log("BGCT MULTI-VIDEO PASS — larger lecture player wins over autoplay preview, hidden player rejected, visibility restoration handled.");
+ // Replacing the lecture <video> must not assign the old DOM caption to it.
+ await evaluate("(()=>{const old=document.querySelector('#player-wrapper video');old.style.display='none';const next=document.createElement('video');next.id='bgct-replacement-player';next.style.cssText='display:block;width:700px;height:390px';old.parentNode.appendChild(next);return true})()");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"new player quarantines inherited DOM caption",5000);
+ await pause(950);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Old caption must remain hidden on replacement player");
+ await evaluate("document.querySelector('[data-purpose=\\\"captions-display\\\"]').textContent='Replacement player fresh caption'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Replacement player fresh caption'"),"replacement player accepts fresh caption",5000);
+ await evaluate("(()=>{document.getElementById('bgct-replacement-player').remove();document.querySelector('#player-wrapper video').style.display='block';document.querySelector('[data-purpose=\\\"captions-display\\\"]').textContent='Synthetic English caption';return true})()");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"original player restored after replacement",5000);
+ console.log("BGCT REPLACEMENT VIDEO CAPTION PASS — stale DOM cue blocked; new caption accepted.");
+
 
 
 
