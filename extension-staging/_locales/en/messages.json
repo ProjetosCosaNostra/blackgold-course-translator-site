@@ -87,5 +87,25 @@
   "statusNeedsActivation": {
     "message": "Click to start translation",
     "description": "The local model can be started from a real user interaction; do not start downloads during passive page load."
+  },
+  "errorInvalidCue": {
+    "message": "Caption data could not be read.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorStaleTranslation": {
+    "message": "Translation interrupted. Try again.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorEmptyOutput": {
+    "message": "The browser returned no translated text. Try again.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorMissingContext": {
+    "message": "The current lesson could not be identified.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorModelNotReady": {
+    "message": "The translation model is not ready yet.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
   }
 }

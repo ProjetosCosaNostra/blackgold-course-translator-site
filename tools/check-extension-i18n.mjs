@@ -37,6 +37,14 @@ assert.equal(api.status("downloading",250,"en"),"Downloading 100%");
 assert.equal(api.status("ready",null,"en"),"Ready ✓");
 assert.equal(api.status("unknown",null,"en"),"Preparing...");
 assert.equal(api.message("missing","en"),"");
+assert.equal(api.captionError("invalid-cue","pt-BR"),"Não foi possível ler os dados da legenda.");
+assert.equal(api.captionError("invalid-cue","en"),"Caption data could not be read.");
+assert.equal(api.captionError("stale-translation","es"),"Traducción interrumpida. Inténtalo de nuevo.");
+assert.equal(api.captionError("empty-output","en"),"The browser returned no translated text. Try again.");
+assert.equal(api.captionError("not-ready","pt_BR"),"O modelo de tradução ainda não está pronto.");
+assert.equal(api.captionError("invalid-context","es"),"No se pudo identificar la clase actual.");
+assert.equal(api.captionError("unknown-error","es"),"Error de traducción","Unknown reasons must safely fall back.");
+
 for(const l of lang){
  for(const k of primary){
   assert.equal(api.message(k,l,{percent:50}),all[l][k].message.replace("$PERCENT$","50"),"Mismatch in runtime and manifest catalog "+l+":"+k);

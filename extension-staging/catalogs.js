@@ -1,5 +1,6 @@
 // Staging catalog generated from locale message resources; do not merge into the shipping extension without source review.
-(function(root){"use strict";root.BGCT_STAGING_CATALOGS=Object.freeze({
+(function(root){"use strict";
+root.BGCT_STAGING_CATALOGS=Object.freeze({
   "en": {
     "extensionName": "BlackGold Course Translator",
     "extensionDescription": "Synchronized translation of captions and transcripts for supported online courses.",
@@ -21,7 +22,12 @@
     "labelEcosystem": "Ecosystem",
     "errorNoCaptions": "No captions or transcript available",
     "errorUnsupportedPage": "This course page is not supported",
-    "statusNeedsActivation": "Click to start translation"
+    "statusNeedsActivation": "Click to start translation",
+    "errorInvalidCue": "Caption data could not be read.",
+    "errorStaleTranslation": "Translation interrupted. Try again.",
+    "errorEmptyOutput": "The browser returned no translated text. Try again.",
+    "errorMissingContext": "The current lesson could not be identified.",
+    "errorModelNotReady": "The translation model is not ready yet."
   },
   "pt_BR": {
     "extensionName": "BlackGold Course Translator",
@@ -44,7 +50,12 @@
     "labelEcosystem": "Ecossistema",
     "errorNoCaptions": "Nenhuma legenda ou transcrição disponível",
     "errorUnsupportedPage": "Esta página de curso não é compatível",
-    "statusNeedsActivation": "Clique para iniciar a tradução"
+    "statusNeedsActivation": "Clique para iniciar a tradução",
+    "errorInvalidCue": "Não foi possível ler os dados da legenda.",
+    "errorStaleTranslation": "Tradução interrompida. Tente novamente.",
+    "errorEmptyOutput": "O navegador não retornou o texto traduzido. Tente novamente.",
+    "errorMissingContext": "Não foi possível identificar a aula atual.",
+    "errorModelNotReady": "O modelo de tradução ainda não está pronto."
   },
   "es": {
     "extensionName": "BlackGold Course Translator",
@@ -67,7 +78,12 @@
     "labelEcosystem": "Ecosistema",
     "errorNoCaptions": "No hay subtítulos ni transcripción disponibles",
     "errorUnsupportedPage": "Esta página del curso no es compatible",
-    "statusNeedsActivation": "Haz clic para iniciar la traducción"
+    "statusNeedsActivation": "Haz clic para iniciar la traducción",
+    "errorInvalidCue": "No se pudieron leer los datos del subtítulo.",
+    "errorStaleTranslation": "Traducción interrumpida. Inténtalo de nuevo.",
+    "errorEmptyOutput": "El navegador no devolvió texto traducido. Inténtalo de nuevo.",
+    "errorMissingContext": "No se pudo identificar la clase actual.",
+    "errorModelNotReady": "El modelo de traducción todavía no está listo."
   }
 });
 })(globalThis);

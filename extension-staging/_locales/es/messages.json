@@ -87,5 +87,25 @@
   "statusNeedsActivation": {
     "message": "Haz clic para iniciar la traducción",
     "description": "The local model can be started from a real user interaction; do not start downloads during passive page load."
+  },
+  "errorInvalidCue": {
+    "message": "No se pudieron leer los datos del subtítulo.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorStaleTranslation": {
+    "message": "Traducción interrumpida. Inténtalo de nuevo.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorEmptyOutput": {
+    "message": "El navegador no devolvió texto traducido. Inténtalo de nuevo.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorMissingContext": {
+    "message": "No se pudo identificar la clase actual.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorModelNotReady": {
+    "message": "El modelo de traducción todavía no está listo.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
   }
 }

@@ -68,3 +68,10 @@ Full original extension source, real Chrome/Edge tests, actual Udemy caption int
 - Outro bug: resposta `stale` do runtime, quando não há legenda mais recente, deixava a promise anterior memorizada, bloqueando uma nova tentativa. Agora a resposta antiga é liberada e a tentativa seguinte pode prosseguir; a falha é explicitada como `stale-translation`.
 - Testes: evento de legenda com texto ausente, resultado obsoleto, legenda genuinamente vazia e nova tentativa após cancelamento, todos cobertos por `tools/check-caption-coordinator.mjs`.
 - Nota: testes na branch staging com simulação do runtime, sem prova de compatibilidade com a extensão 0.6.0 instalada.
+
+
+## 2026-11-02 — mensagens localizadas para erros de legenda
+- `_locales/en`, `pt_BR` e `es` agora incluem mensagens para `invalid-cue`, `stale-translation`, `empty-output`, ausência de identificação da aula e modelo ainda não pronto.
+- `locale-core.js` fornece `captionError(reason, locale)`, com fallback seguro para erro genérico quando o código não é conhecido. `catalogs.js` acompanha as mesmas strings para permitir escolha manual de idioma da interface.
+- Testes cobrem os códigos nos três idiomas e fallback. Não foi alterada a preferência do idioma-alvo da tradução; a internacionalização é da UI.
+- Integração na interface real da extensão ainda depende de recuperar a fonte original. Não confundir sucesso do staging com um novo release.

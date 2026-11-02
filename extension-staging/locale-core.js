@@ -57,7 +57,20 @@ async function save(storage,locale){
  if(!normalized||!storage||typeof storage.set!=="function")return false;
  try{await storage.set({[storageKey]:normalized});return true}catch{return false}
 }
-const api=Object.freeze({storageKey,supported,normalize,resolve,message,status,getSaved,save});
+
+const captionErrorKeys=Object.freeze({
+ "invalid-cue":"errorInvalidCue",
+ "stale-translation":"errorStaleTranslation",
+ "empty-output":"errorEmptyOutput",
+ "invalid-context":"errorMissingContext",
+ "missing-context":"errorMissingContext",
+ "not-ready":"errorModelNotReady"
+});
+function captionError(reason,locale){
+ const key=captionErrorKeys[reason]||"statusError";
+ return message(key,locale);
+}
+const api=Object.freeze({storageKey,supported,normalize,resolve,message,status,captionError,getSaved,save});
 root.BGCT_STAGING_LOCALE = api;
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 })(globalThis);
