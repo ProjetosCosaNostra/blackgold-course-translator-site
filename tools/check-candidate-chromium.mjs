@@ -463,7 +463,7 @@ async function main(){
   if(result.exceptionDetails)throw Error("Popup JS error: "+JSON.stringify(result.exceptionDetails).slice(0,800));
   return result.result?.value;
  }
- await until(async()=>await popupEval("document.getElementById('open')?.textContent?.length>0"),"actual popup startup",8000);
+ await until(async()=>await popupEval("document.documentElement.dataset.bgctPopupReady==='true'"),"popup preferences fully initialized",8000);
  assert.equal(await popupEval("location.protocol"),"chrome-extension:","Popup must run as a real extension page");
  assert.equal(await popupEval("document.querySelector('header strong').textContent"),"BlackGold Course Translator");
  assert.equal(await popupEval("document.getElementById('ui-label').textContent"),"Interface language");
