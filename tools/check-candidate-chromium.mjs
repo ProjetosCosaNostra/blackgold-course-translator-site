@@ -54,7 +54,7 @@ function openCDP(socketURL){
  let next=1;
  ws.addEventListener("message",ev=>{
   const item=JSON.parse(typeof ev.data==="string"?ev.data:String(ev.data));
-  if(!item.id&&["Runtime.exceptionThrown","Log.entryAdded","Runtime.consoleAPICalled","Page.frameNavigated"].includes(item.method))events.push(item);
+  if(!item.id&&["Runtime.executionContextCreated","Runtime.executionContextDestroyed","Runtime.exceptionThrown","Log.entryAdded","Runtime.consoleAPICalled","Page.frameNavigated"].includes(item.method))events.push(item);
   if(item.id&&outstanding.has(item.id)){
    const {resolve,reject}=outstanding.get(item.id);outstanding.delete(item.id);
    if(item.error)reject(Error(JSON.stringify(item.error)));
@@ -161,6 +161,69 @@ async function main(){
    await until(async()=>await evaluate("document.fullscreenElement===null&&document.getElementById('bgct-candidate-panel').parentNode===document.body"),"exit fullscreen overlay relocation",6000);
   }else console.log("BGCT FULLSCREEN CHECK SKIPPED: headless build rejected requestFullscreen ("+entered+")");
  }else console.log("BGCT FULLSCREEN CHECK SKIPPED: fullscreen API disabled in headless runner");
+
+
+ // Exercise the real MV3 isolated-world code path, but inject a deterministic
+ // test Translator. This does NOT test native model support or contact Udemy.
+ const extContext=await until(async()=>{
+  const ids=[...new Set(cdp.events.filter(e=>e.method==="Runtime.executionContextCreated").map(e=>e.params?.context?.id).filter(Number.isInteger))];
+  for(const id of ids){
+   try{
+    const v=await cdp.call("Runtime.evaluate",{expression:"typeof globalThis.BGCT_STAGING_SESSION",contextId:id,returnByValue:true});
+    if(v.result?.value==="object")return id;
+   }catch{}
+  }
+  return null;
+ },"MV3 isolated-world execution context",12000);
+ async function isolated(expression){
+  const result=await cdp.call("Runtime.evaluate",{expression,contextId:extContext,returnByValue:true,awaitPromise:true});
+  if(result.exceptionDetails)throw Error("Extension world JS error: "+JSON.stringify(result.exceptionDetails).slice(0,700));
+  return result.result?.value;
+ }
+ const mockScript=String.raw`
+ (()=>{
+  const mock={availability:[],created:0,destroyed:0,requests:[]};
+  globalThis.__BGCT_TEST_MOCK=mock;
+  globalThis.Translator={
+   availability:async pair=>{mock.availability.push(pair);return "available"},
+   create(options){
+    mock.created++;
+    return Promise.resolve({
+     translate(text,{signal}={}){
+      return new Promise((resolve,reject)=>{
+       mock.requests.push({text,resolve,reject,signal});
+       signal?.addEventListener("abort",()=>reject(new Error("test request aborted")),{once:true});
+      });
+     },
+     destroy(){mock.destroyed++}
+    });
+   }
+  };
+  return true;
+ })()
+ `;
+ assert.equal(await isolated(mockScript),true);
+ // Trigger a different-language pair on the real panel and wait for availability.
+ await evaluate("(()=>{const e=document.getElementById('bgct-candidate-target');e.value='pt';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.availability.length>0"),"browser on-device adapter availability probe");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.created"),0,"Passive lesson load must never download a model");
+ await until(async()=>await evaluate("document.querySelector('#bgct-candidate-panel .bgct-state').textContent==='Click to start translation'"),"visible manual model activation");
+ await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').click()",true);
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.created===1"),"model created by in-page action");
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>=1"),"first model translation request");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests[0].text"),"Synthetic English caption");
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"","No flash of untranslated original sentence");
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Fast second sentence'");
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>=2"),"second translated caption request");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests[0].signal.aborted"),true,"Real browser path cancels the obsolete cue");
+ await isolated("globalThis.__BGCT_TEST_MOCK.requests[1].resolve('Segunda frase traduzida');true");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Segunda frase traduzida'"),"translated subtitle overlay");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.created"),1);
+ console.log("BGCT REAL BROWSER TRANSLATION CONTRACT PASS — MV3 isolated world, simulated Translator, direct activation, cue cancellation, translated overlay.");
+ // Restore original-language mode for SPA/fullscreen and route-cleanup checks.
+ await evaluate("(()=>{const e=document.getElementById('bgct-candidate-target');e.value='en';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Fast second sentence'"),"return to same-language passthrough");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.destroyed"),1,"Changing language pair must destroy the old session");
 
  // SPA lecture navigation with same video must not continue showing the old caption.
  await evaluate("(()=>{document.querySelector('[data-purpose=\"captions-display\"]').textContent='Second lesson text';document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Synthetic lesson two';history.pushState({},'','/course/local-fixture/learn/lecture-2');return true})()");
