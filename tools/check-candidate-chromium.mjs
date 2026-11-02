@@ -89,8 +89,9 @@ async function main(){
  const port=server.address().port;
  const lessonURL="https://www.udemy.com:"+port+"/course/local-fixture/learn/lecture-1";
  const chrome=spawn(chromePath(),[
-  "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--disable-background-networking",
-  "--no-first-run","--no-default-browser-check","--disable-component-update",
+  "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage",
+  ...(!nativeProof?["--disable-background-networking","--disable-component-update"]:[]),
+  "--no-first-run","--no-default-browser-check",
   "--ignore-certificate-errors","--no-proxy-server","--remote-allow-origins=*",
   "--host-resolver-rules=MAP www.udemy.com 127.0.0.1",
   "--disable-extensions-except="+ext,"--load-extension="+ext,
