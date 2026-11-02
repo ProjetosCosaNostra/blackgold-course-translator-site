@@ -16,6 +16,7 @@ if(!fs.existsSync(path.join(ext,"manifest.json")))
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"bgct-chromium-smoke-"));
 const cert=path.join(tmp,"cert.pem"),key=path.join(tmp,"key.pem"),profile=path.join(tmp,"chrome");
 const launched=[];
+const nativeProof=process.env.BGCT_NATIVE_PROOF==="explicit-manual-opt-in";
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function chromePath(){
  for(const name of [process.env.CHROME_PATH,"google-chrome","google-chrome-stable","chromium","chromium-browser"]){
@@ -69,7 +70,7 @@ function openCDP(socketURL){
   const id=next++;
   const done=new Promise((resolve,reject)=>outstanding.set(id,{resolve,reject}));
   ws.send(JSON.stringify({id,method,params}));
-  return Promise.race([done,timeout(12000,"CDP call timed out: "+method)]);
+  return Promise.race([done,timeout(nativeProof?150000:12000,"CDP call timed out: "+method)]);
  }
  return {ws,events,ready:new Promise((resolve,reject)=>{
   ws.addEventListener("open",resolve,{once:true});
@@ -198,8 +199,8 @@ async function main(){
   }
   return null;
  },"MV3 isolated-world execution context",12000);
- async function isolated(expression){
-  const result=await cdp.call("Runtime.evaluate",{expression,contextId:extContext,returnByValue:true,awaitPromise:true});
+ async function isolated(expression,gesture=false){
+  const result=await cdp.call("Runtime.evaluate",{expression,contextId:extContext,returnByValue:true,awaitPromise:true,userGesture:gesture});
   if(result.exceptionDetails)throw Error("Extension world JS error: "+JSON.stringify(result.exceptionDetails).slice(0,700));
   return result.result?.value;
  }
@@ -274,10 +275,10 @@ async function main(){
   assert.equal(typeof nativePairStatus,"string","Native availability should return a status string");
   // Native translation is attempted ONLY if Chrome reports the model ALREADY installed.
   // A downloadable/downloading model must never be created by automated CI.
-  if(nativePairStatus==="available"&&nativeProbe.create==="function"){
+  if((nativePairStatus==="available"||nativeProof&&["downloadable","downloading"].includes(nativePairStatus))&&nativeProbe.create==="function"){
    const nativeResult=await isolated(`(async()=>{
     const abort=new AbortController();
-    const limit=setTimeout(()=>abort.abort(),12000);
+    const limit=setTimeout(()=>abort.abort(),nativeProof?90000:12000);
     let session;
     try{
      session=await Promise.race([
@@ -290,9 +291,9 @@ async function main(){
      ]);
      return {ok:typeof output==='string'&&output.trim().length>0,outputType:typeof output};
     }finally{clearTimeout(limit);try{session?.destroy?.()}catch{}}
-   })()`);
+   })()`,nativeProof);
    assert.equal(nativeResult?.ok,true,"Installed native model must return nonempty translation");
-   console.log("BGCT NATIVE INSTALLED-MODEL TRANSLATION PASS — native session created, translated, destroyed; no model download.");
+   console.log(nativeProof?"BGCT NATIVE MODEL TRANSLATION PASS — explicit opt-in, native session created/translating/destroyed.":"BGCT NATIVE INSTALLED-MODEL TRANSLATION PASS — native session created, translated, destroyed; no model download.");
   }else{
    console.log("BGCT NATIVE TRANSLATION NOT TESTED — model not installed or API unavailable; no download attempted.");
   }
