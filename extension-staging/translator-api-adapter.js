@@ -8,14 +8,14 @@ function makeRuntime(config={}){
  const getCtor=()=>Object.prototype.hasOwnProperty.call(config,"TranslatorCtor")?config.TranslatorCtor:root.Translator;
  const onState=typeof config.onState==="function"?config.onState:()=>{};
  const onProgress=typeof config.onProgress==="function"?config.onProgress:()=>{};
- let generation=0,pending=null,active=null,currentState="idle";
+ let generation=0,translationRevision=0,pending=null,active=null,currentState="idle";
  function inform(state,detail={}){
   if(!states.has(state))throw new Error("Unsupported translator state: "+state);
   currentState=state;
   try{onState(state,detail)}catch{/* UI observers must never crash translation */}
  }
  function destroyActive(){const x=active;active=null;if(x&&typeof x.destroy==="function"){try{x.destroy()}catch{/* cleanup best effort */}}}
- function invalidate(){generation++;pending=null;destroyActive();return generation}
+ function invalidate(){generation++;translationRevision++;pending=null;destroyActive();return generation}
  function reset(){invalidate();inform("idle")}
  function supported(){
   const T=getCtor();
@@ -54,6 +54,7 @@ function makeRuntime(config={}){
   pending=null;
   inform(task.availability==="available"?"loading":"downloading",{availability:task.availability});
   let promise;
+  let downloadOpen=true;
   try{
    // The create() call occurs synchronously before the async function first yields.
    promise=getCtor().create({
@@ -62,18 +63,20 @@ function makeRuntime(config={}){
     monitor(observer){
      if(!observer||typeof observer.addEventListener!=="function")return;
      observer.addEventListener("downloadprogress",event=>{
-      if(token!==generation)return;
-      const value=Number(event?.loaded);
-      const percent=Number.isFinite(value)?Math.max(0,Math.min(100,Math.round(value*100))):null;
+      if(token!==generation||!downloadOpen)return;
+      const value=event?.loaded;
+      if(typeof value!=="number"||!Number.isFinite(value))return;
+      const percent=Math.max(0,Math.min(100,Math.round(value*100)));
       inform("downloading",{progress:percent});
-      if(percent!==null){try{onProgress(percent)}catch{/* ignore UI callback errors */}}
+      try{onProgress(percent)}catch{/* ignore UI callback errors */}
      });
     }
    });
-  }catch{if(token===generation)inform("error",{reason:"create-failed"});return {ok:false,code:"create-failed"}}
+  }catch{downloadOpen=false;if(token===generation)inform("error",{reason:"create-failed"});return {ok:false,code:"create-failed"}}
   let translator;
   try{translator=await promise}
-  catch{if(token!==generation)return {ok:false,code:"stale"};inform("error",{reason:"create-failed"});return {ok:false,code:"create-failed"}}
+  catch{downloadOpen=false;if(token!==generation)return {ok:false,code:"stale"};inform("error",{reason:"create-failed"});return {ok:false,code:"create-failed"}}
+  downloadOpen=false;
   if(token!==generation){
    try{translator?.destroy?.()}catch{}
    return {ok:false,code:"stale"};
@@ -88,15 +91,17 @@ function makeRuntime(config={}){
   return {ok:true,code:"ready"};
  }
  async function translate(text){
+  // Every incoming caption supersedes the previous one, even in the same lesson.
+  const revision=++translationRevision;
   const translator=active,token=generation;
   if(!translator)return {ok:false,code:"not-ready"};
   if(typeof text!=="string")return {ok:false,code:"invalid-text"};
-  if(!text.trim())return {ok:true,code:"empty",text:""};
+  if(!text.trim()){inform("ready");return {ok:true,code:"empty",text:""}}
   inform("translating");
   let result;
   try{result=await translator.translate(text)}
-  catch{if(token!==generation)return {ok:false,code:"stale"};inform("error",{reason:"translate-failed"});return {ok:false,code:"translate-failed"}}
-  if(token!==generation||translator!==active)return {ok:false,code:"stale"};
+  catch{if(token!==generation||revision!==translationRevision||translator!==active)return {ok:false,code:"stale"};inform("error",{reason:"translate-failed"});return {ok:false,code:"translate-failed"}}
+  if(token!==generation||revision!==translationRevision||translator!==active)return {ok:false,code:"stale"};
   if(typeof result!=="string"){
    inform("error",{reason:"non-text-result"});
    return {ok:false,code:"non-text-result"};

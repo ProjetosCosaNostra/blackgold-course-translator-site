@@ -22,3 +22,10 @@ Never claim the translation is ready before the local model is created. Never st
 
 ## Remains blocked
 Full original extension source, real Chrome/Edge tests, actual Udemy caption integration, preservation of old feature set, release and approval. No merge/deploy in this staging step.
+
+## Correção adicional — disputas assíncronas entre legendas
+- Mesmo dentro da mesma aula, cada chamada `translate()` incrementa um número sequencial. Somente o resultado da chamada mais recente pode ser considerado atual, inclusive quando uma tradução anterior falha depois de uma nova ter terminado.
+- Uma legenda vazia também invalida o resultado anterior. `reset` e nova consulta de disponibilidade invalidam pedidos em andamento.
+- Progresso de download atrasado não regride a interface de `ready` para `downloading`; eventos sem valor numérico não são convertidos indevidamente em 0%.
+- Testes simulados em `tools/check-translator-api.mjs` cobrem conclusão fora de ordem, erro obsoleto, legenda vazia, troca de idioma e progresso atrasado.
+- Este módulo permanece isolado. Ainda falta integração no `content.js` original e teste com aula real.
