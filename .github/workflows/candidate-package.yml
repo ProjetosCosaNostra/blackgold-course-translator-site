@@ -1,0 +1,58 @@
+name: BGCT internal candidate ZIP with Chrome proof (no release)
+on:
+  push:
+    branches: [work/bgct-restart-zero-budget-i18n-20261102]
+    paths:
+      - 'extension-candidate/**'
+      - 'tools/build-extension-candidate.py'
+      - 'tools/check-extension-package.py'
+      - 'tools/check-candidate-chromium.mjs'
+      - '.github/workflows/candidate-package.yml'
+  pull_request:
+    paths:
+      - 'extension-candidate/**'
+      - 'tools/build-extension-candidate.py'
+      - 'tools/check-extension-package.py'
+      - 'tools/check-candidate-chromium.mjs'
+      - '.github/workflows/candidate-package.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate candidate source
+        run: node tools/check-extension-candidate.mjs
+      - name: Build internal reproducible ZIP and SHA-256 receipt
+        run: python3 tools/build-extension-candidate.py --output dist/bgct-internal-candidate-0.6.1.zip
+      - name: Verify every entry and extract in temporary GitHub runner
+        run: >-
+          python3 tools/check-extension-package.py
+          --zip dist/bgct-internal-candidate-0.6.1.zip
+          --extract-to "$RUNNER_TEMP/bgct-internal-unpacked"
+      - name: Install Chrome for Testing for unpacked ZIP validation
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+      - name: Run actual MV3 browser checks from extracted ZIP, not workspace source
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          BGCT_CANDIDATE_DIR: ${{ runner.temp }}/bgct-internal-unpacked
+        run: node tools/check-candidate-chromium.mjs
+      - name: Store internal candidate only as temporary GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BGCT_INTERNAL_CANDIDATE_NOT_RELEASE-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            dist/bgct-internal-candidate-0.6.1.zip
+            dist/bgct-internal-candidate-0.6.1.sha256
+            dist/bgct-internal-candidate-0.6.1.receipt.json

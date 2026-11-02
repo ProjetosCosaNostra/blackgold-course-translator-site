@@ -1,0 +1,31 @@
+name: BGCT native Translator manual proof (isolated, no release)
+on:
+  workflow_dispatch:
+    inputs:
+      consent:
+        description: "Type NATIVE_MODEL_DOWNLOAD_OK to allow model download on disposable runner only"
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  native-proof:
+    if: ${{ inputs.consent == 'NATIVE_MODEL_DOWNLOAD_OK' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          chrome-version: stable
+      - name: Native model proof on temporary browser profile
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          BGCT_NATIVE_PROOF: explicit-manual-opt-in
+        run: |
+          "$CHROME_PATH" --version
+          node tools/check-candidate-chromium.mjs

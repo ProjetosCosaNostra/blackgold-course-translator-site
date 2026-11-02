@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extensionName__",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
+  "version": "0.6.1",
+  "version_name": "0.6.1-INTERNAL-CANDIDATE-DO-NOT-PUBLISH",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "icons": {
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "BlackGold Course Translator — Candidate",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "128": "icons/icon-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.udemy.com/course/*/learn/*"
+      ],
+      "js": [
+        "lib/catalogs.js",
+        "lib/locale-core.js",
+        "lib/translator-api-adapter.js",
+        "lib/caption-coordinator.js",
+        "lib/session-controller.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
