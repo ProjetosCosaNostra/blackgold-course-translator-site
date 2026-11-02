@@ -15,7 +15,7 @@ function makeCoordinator(config={}){
   try{onRender(view)}catch{/* Never crash the translator because a UI callback fails */}
   return view;
  }
- function languageBase(tag){return String(tag||"").toLowerCase().split("-")[0]}
+ function languageBase(tag){return String(tag||"").trim().toLowerCase().replace(/_/g,"-").split("-")[0]}
  function readContext(value){
   if(!value||typeof value!=="object")return null;
   const fields=["courseId","lectureId","sourceLanguage","targetLanguage"];

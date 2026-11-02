@@ -14,7 +14,8 @@ function makeSession(config={}){
  const captions=b.makeCoordinator({runtime,maxCacheEntries:config.maxCacheEntries,
   onRender(view){try{onCaption(view)}catch{}}
  });
- let pair=null,closed=false,revision=0,preparing=null;
+ let pair=null,closed=false,revision=0,preparing=null,originalMode=false;
+ function baseLanguage(tag){return String(tag||"").trim().toLowerCase().replace(/_/g,"-").split("-")[0]}
  function readPair(input){
   if(!input||typeof input!=="object")return null;
   for(const key of ["courseId","lectureId","sourceLanguage","targetLanguage"]){
@@ -26,12 +27,19 @@ function makeSession(config={}){
   if(closed)return Promise.resolve({ok:false,code:"closed"});
   const next=readPair(input);
   if(!next){
-   revision++;preparing=null;pair=null;captions.setContext(input);
+   revision++;preparing=null;pair=null;originalMode=false;captions.setContext(input);
    return Promise.resolve({ok:false,code:"invalid-context"});
   }
   const pairChanged=pair!==next;
   pair=next;
-  if(!captions.setContext(input)){revision++;preparing=null;pair=null;return Promise.resolve({ok:false,code:"invalid-context"})}
+  originalMode=baseLanguage(input.sourceLanguage)===baseLanguage(input.targetLanguage);
+  if(!captions.setContext(input)){revision++;preparing=null;pair=null;originalMode=false;return Promise.resolve({ok:false,code:"invalid-context"})}
+  if(originalMode){
+   // If the language already matches, render original captions without a Translator model.
+   // This path never calls availability(), create() or requests a download.
+   revision++;preparing=null;
+   return Promise.resolve({ok:true,code:"original-ready"});
+  }
   if(!pairChanged){
    if(runtime.snapshot().ready)return Promise.resolve({ok:true,code:"ready"});
    if(preparing)return preparing;
@@ -54,21 +62,23 @@ function makeSession(config={}){
  // MUST be called directly from a trusted click: no await before Translator.create.
  function activateFromGesture(){
   if(closed||!pair)return Promise.resolve({ok:false,code:closed?"closed":"no-context"});
+  if(originalMode)return Promise.resolve({ok:true,code:"original-ready"});
   return runtime.startFromGesture();
  }
  function showCue(cue){
   if(closed||!pair)return Promise.resolve({ok:false,code:closed?"closed":"no-context"});
+  if(originalMode)return captions.showCue(cue);
   if(!runtime.snapshot().ready){captions.clear();return Promise.resolve({ok:false,code:"not-ready"})}
   return captions.showCue(cue);
  }
  function clear(){if(!closed)captions.clear()}
  function close(){
   if(closed)return;
-  closed=true;revision++;preparing=null;pair=null;captions.close();
+  closed=true;revision++;preparing=null;pair=null;originalMode=false;captions.close();
  }
  function snapshot(){
   const s=captions.snapshot(),r=runtime.snapshot();
-  return Object.freeze({closed,selectedPair:pair,ready:r.ready,modelState:r.state,
+  return Object.freeze({closed,selectedPair:pair,ready:r.ready,originalMode,canRender:originalMode||r.ready,modelState:r.state,
    captionState:s.state,courseId:s.courseId,lectureId:s.lectureId,cacheSize:s.cacheSize});
  }
  return Object.freeze({setLesson,activateFromGesture,showCue,clear,close,snapshot});

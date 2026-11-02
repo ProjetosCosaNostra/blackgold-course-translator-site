@@ -99,4 +99,30 @@ assert.equal(slowModel.snapshot().ready,true);
 slowModel.close();
 assert.equal(cancelledModels,1);
 
+
+const alreadyTexts=[],sameCounts={availability:0,create:0,translate:0,destroy:0};
+const same=make({TranslatorCtor:{
+ availability:async()=>{sameCounts.availability++;return "available"},
+ create(){sameCounts.create++;return Promise.resolve({translate:async t=>{sameCounts.translate++;return t},destroy(){sameCounts.destroy++}})}
+},onCaption:frame=>alreadyTexts.push(frame)});
+const sameLesson={courseId:"course-original",lectureId:"one",sourceLanguage:"en-US",targetLanguage:"EN"};
+assert.equal((await same.setLesson(sameLesson)).code,"original-ready");
+assert.equal(same.snapshot().originalMode,true);
+assert.equal(same.snapshot().canRender,true);
+assert.equal(same.snapshot().ready,false,"Passthrough is not a loaded translation model");
+assert.equal((await same.activateFromGesture()).code,"original-ready");
+assert.equal((await same.showCue({cueId:"1",text:"Already English"})).code,"original");
+assert.equal(alreadyTexts.at(-1).text,"Already English");
+assert.equal(alreadyTexts.at(-1).state,"original");
+assert.equal((await same.setLesson({...sameLesson,lectureId:"two",sourceLanguage:"en_US"})).code,"original-ready");
+assert.equal((await same.showCue({cueId:"2",text:"Same base language"})).text,"Same base language");
+assert.equal(sameCounts.availability,0,"Matching languages must not probe model availability");
+assert.equal(sameCounts.create,0,"Matching languages must not request model download");
+assert.equal(sameCounts.translate,0,"Matching languages must not call translation API");
+assert.equal((await same.setLesson({...sameLesson,lectureId:"three",sourceLanguage:"es",targetLanguage:"es-MX"})).code,"original-ready");
+assert.equal((await same.showCue({cueId:"3",text:"Español original"})).code,"original");
+assert.equal(sameCounts.availability,0);
+same.close();
+assert.equal(same.snapshot().originalMode,false);
+
 console.log("BGCT SESSION CONTROLLER PASS: passive probe, trusted gesture, active cues, lesson reuse, language reset, cache clearing and safe close.");

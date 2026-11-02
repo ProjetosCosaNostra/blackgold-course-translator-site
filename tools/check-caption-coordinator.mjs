@@ -157,4 +157,14 @@ assert.equal(invalidScreens.at(-1).state,"error","Former cue must not restore ou
 assert.equal((await malformed.showCue(null)).code,"invalid-cue");
 assert.equal((await malformed.showCue({cueId:"valid-empty",text:""})).code,"no-caption","Genuinely empty cue remains distinct");
 
+
+const passthrough=make({runtime:{
+ translate(){throw Error("No model must be invoked for same-language captions")},
+ cancelPending(){}
+}});
+assert.equal(passthrough.setContext({courseId:"co",lectureId:"lesson",sourceLanguage:"EN_us",targetLanguage:"en-GB"}),true);
+assert.equal((await passthrough.showCue({text:"Preserve original"})).code,"original");
+assert.equal((await passthrough.showCue({text:"Preserve original"})).text,"Preserve original");
+passthrough.close();
+
 console.log("BGCT CAPTION COORDINATOR PASS — no source flash, stale cue/lecture suppression, duplicate dedupe, bounded cache, errors, language and context.");

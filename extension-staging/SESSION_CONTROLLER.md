@@ -11,3 +11,6 @@ The model is retained across lecture changes for the same language pair. Changin
 Validation: node tools/check-session-controller.mjs, run by GitHub Actions on staging.
 
 Navigating between lectures while the same language model is still being created returns model-loading and preserves the in-flight creation. This avoids a repeated user download/activation request. Tests simulate the delayed model and verify it is not aborted until the session closes.
+
+## 02 Nov 2026 — direct captions for matching language
+If source and target share the same base language (such as en-US to en or en_US to en-GB), the controller now returns original-ready, renders original captions directly, and skips availability checks, model creation, and downloads. No translation session is falsely marked ready; snapshot distinguishes model readiness from originalMode/canRender. The caption coordinator also understands underscore-separated language tags. This is tested only in staging mocks; the original extension remains unmodified.
