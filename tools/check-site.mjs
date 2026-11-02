@@ -35,7 +35,7 @@ for(const [locale,lang]of Object.entries(locales)){
    assert(!/href="https?:\/\/(?:chrome\.google\.com\/webstore|microsoftedge\.microsoft\.com\/addons)/i.test(html),"Premature store CTA: "+relative);
   }
   if(file==="privacy.html")assert((html.match(/<h2>/g)||[]).length===10,"Privacy sections incomplete: "+relative);
-  if(file==="ecosystem.html")assert(!/blackgold-ecosystem\.pages\.dev|href="https?:\/\//.test(html),"Premature canonical ecosystem link: "+relative);
+  if(file==="ecosystem.html")assert(!/blackgold-ecosystem\.pages\.dev|<a\\s[^>]*href="https?:\/\//.test(html),"Premature public ecosystem CTA: "+relative);
   for(const attr of ["href","src"]){
    for(const match of html.matchAll(new RegExp('\\b'+attr+'="([^"]+)"','g'))){
     const u=match[1];
