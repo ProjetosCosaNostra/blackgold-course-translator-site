@@ -6,11 +6,13 @@ on:
     paths:
       - 'extension-staging/**'
       - 'tools/check-extension-i18n.mjs'
+      - 'tools/check-translator-api.mjs'
       - '.github/workflows/extension-i18n-check.yml'
   pull_request:
     paths:
       - 'extension-staging/**'
       - 'tools/check-extension-i18n.mjs'
+      - 'tools/check-translator-api.mjs'
       - '.github/workflows/extension-i18n-check.yml'
   workflow_dispatch:
 permissions:
