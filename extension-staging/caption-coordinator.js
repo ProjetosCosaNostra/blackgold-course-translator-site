@@ -104,13 +104,16 @@ function makeCoordinator(config={}){
    try{result=await runtime.translate(text)}
    catch{result={ok:false,code:"runtime-error"}}
    if(token!==revision||activeKey!==key)return {ok:false,code:"stale"};
-   if(result&&result.ok&&result.code==="translated"&&typeof result.text==="string"){
+   if(result&&result.ok&&result.code==="translated"&&typeof result.text==="string"&&result.text.trim()){
     cacheSave(key,result.text);
     emit("translated",result.text,detail);
     return result;
    }
+   // Do not memoize failures: a missing local model or transient empty result
+   // must be retryable when the browser becomes ready.
+   activeKey=null;activePromise=null;
    if(result?.code==="stale")return {ok:false,code:"stale"};
-   const reason=String(result?.code||"unknown-translation-error");
+   const reason=result?.code==="translated"?"empty-output":String(result?.code||"unknown-translation-error");
    emit("error","",{...detail,reason});
    return {ok:false,code:reason};
   })();

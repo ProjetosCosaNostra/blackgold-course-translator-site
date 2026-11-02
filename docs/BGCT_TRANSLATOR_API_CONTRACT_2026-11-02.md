@@ -52,3 +52,11 @@ Full original extension source, real Chrome/Edge tests, actual Udemy caption int
 - Nova função `close()` encerra a sessão, apaga cache e contexto, impede retorno de texto antigo após fechar o painel.
 - Testes `check-caption-coordinator.mjs` cobrem limpeza ao trocar de curso, contexto inválido, resultados atrasados e fechamento.
 - Novo `check-staging-integration.mjs` exercita **juntos** o adapter Translator e coordenador: modelo, legendas concorrentes, troca de aula, troca de idioma, cache e liberação. São simulações, **não testes em aula real**.
+
+
+## 2026-11-02 — tradução vazia não pode ser sucesso
+- Falha concreta no contrato da branch: `Translator.translate()` podia retornar espaços/vazio para uma frase não vazia e ser marcado como traduzido. O usuário via uma legenda em branco sem aviso, e o coordenador podia gravar esse resultado no cache.
+- O adaptador passa a devolver `{ok:false,code:"empty-output"}` e estado `error` quando a API devolve texto vazio/branco para uma entrada não vazia. Frases vazias de origem continuam representando `no-caption` normalmente.
+- O coordenador bloqueia o cache de resultados vazios mesmo quando o runtime não aplica a verificação. Falhas não ficam memorizadas como resposta definitiva: repetir a mesma legenda depois de recuperar o modelo tenta novamente.
+- Testes dedicados nos dois módulos e no teste conjunto verificam erro visível, ausência de cache e recuperação após nova tentativa.
+- Esse caso foi validado por mocks no GitHub Actions, NÃO pela extensão 0.6.0 instalada.

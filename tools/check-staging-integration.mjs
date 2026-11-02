@@ -71,4 +71,33 @@ assert.equal(calls.destroy,2,"Closing releases model resources");
 assert.equal(captions.snapshot().cacheSize,0);
 assert.equal(captions.snapshot().hasContext,false);
 assert.ok(states.includes("translating"));
+
+const blankViews=[];
+let blankTranslationCount=0;
+const blankTranslator={
+ availability:async()=>"available",
+ create:()=>Promise.resolve({
+  async translate(){blankTranslationCount++;return blankTranslationCount===1?"   ":"Tradução recuperada";},
+  destroy(){}
+ })
+};
+const blankRuntime=makeRuntime({TranslatorCtor:blankTranslator});
+const blankCoordinator=makeCoordinator({runtime:blankRuntime,onRender:view=>blankViews.push(view)});
+assert.equal(blankCoordinator.setContext({courseId:"empty-course",lectureId:"one",sourceLanguage:"en",targetLanguage:"pt"}),true);
+assert.equal((await blankRuntime.inspect("en","pt")).code,"needs-activation");
+assert.equal((await blankRuntime.startFromGesture()).code,"ready");
+const emptyCue={cueId:"blank",text:"This sentence must not disappear",startMs:0,endMs:1000};
+const blankFailure=await blankCoordinator.showCue(emptyCue);
+assert.equal(blankFailure.code,"empty-output","Empty model output must be classified as failure");
+assert.equal(blankViews.at(-1).state,"error","No empty caption is marked translated");
+assert.equal(blankViews.at(-1).reason,"empty-output");
+assert.equal(blankCoordinator.snapshot().cacheSize,0,"Failed empty text cannot enter cache");
+assert.equal(blankRuntime.snapshot().state,"error");
+const retry=await blankCoordinator.showCue(emptyCue);
+assert.equal(retry.code,"translated","The exact same cue must be retryable");
+assert.equal(retry.text,"Tradução recuperada");
+assert.equal(blankTranslationCount,2);
+assert.equal(blankCoordinator.snapshot().cacheSize,1);
+blankCoordinator.close();
+
 console.log("BGCT END-TO-END STAGING PASS: active model, caption interruption, lesson switch, language switch, cache and privacy cleanup.");

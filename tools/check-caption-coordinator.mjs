@@ -111,4 +111,19 @@ privacyQueue[2].resolve({ok:true,code:"translated",text:"should not render"});
 assert.equal((await p3).code,"stale");
 assert.equal(privacyDraws.at(-1).state,"idle","Closed UI must not render stale user text");
 assert.ok(privacyCalls.filter(x=>x==="reset").length>=2,"Invalid/closed context resets runtime");
+
+const emptyViews=[];let emptyAttempts=0;
+const emptyCoord=make({runtime:{
+ translate:async()=>{emptyAttempts++;return emptyAttempts===1?{ok:true,code:"translated",text:"  "}:{ok:true,code:"translated",text:"Texto correto"}},
+ cancelPending(){}
+},onRender:view=>emptyViews.push(view)});
+emptyCoord.setContext({courseId:"course",lectureId:"one",sourceLanguage:"en",targetLanguage:"pt"});
+const sameCue={cueId:"x",text:"Check whitespace results"};
+assert.equal((await emptyCoord.showCue(sameCue)).code,"empty-output");
+assert.equal(emptyViews.at(-1).state,"error");
+assert.equal(emptyViews.at(-1).reason,"empty-output");
+assert.equal(emptyCoord.snapshot().cacheSize,0);
+assert.equal((await emptyCoord.showCue(sameCue)).code,"translated","Failed cue is retryable");
+assert.equal(emptyAttempts,2);
+assert.equal(emptyCoord.snapshot().cacheSize,1);
 console.log("BGCT CAPTION COORDINATOR PASS — no source flash, stale cue/lecture suppression, duplicate dedupe, bounded cache, errors, language and context.");

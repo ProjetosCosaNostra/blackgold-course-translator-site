@@ -214,4 +214,12 @@ edgeProgress.events.downloadprogress({loaded:20,total:100});
 assert.equal(edgeValues[0],20,"Progress supports Edge loaded/total counters");
 await edgeStart;
 
+
+const whitespace=make({TranslatorCtor:{
+ availability:async()=>"available",
+ create:()=>Promise.resolve({translate:async()=>"   ",destroy(){}})
+}});
+await whitespace.inspect("en","pt");await whitespace.startFromGesture();
+assert.equal((await whitespace.translate("Nonblank source")).code,"empty-output");
+assert.equal(whitespace.snapshot().state,"error","Empty translation must not be ready");
 console.log("BGCT Translator API ADAPTER PASS — availability gates, user gesture, progress, no auto download, same-lesson caption races, AbortSignal cancellation, Chrome/Edge progress, stale results, cleanup and error states.");

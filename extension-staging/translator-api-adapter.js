@@ -139,6 +139,12 @@ function makeRuntime(config={}){
    inform("error",{reason:"non-text-result"});
    return {ok:false,code:"non-text-result"};
   }
+  // A successful promise with no caption text is NOT a successful translation.
+  // Keep the visible error state and never silently blank the subtitles.
+  if(!result.trim()){
+   inform("error",{reason:"empty-output"});
+   return {ok:false,code:"empty-output"};
+  }
   inform("ready");
   return {ok:true,code:"translated",text:result};
  }
