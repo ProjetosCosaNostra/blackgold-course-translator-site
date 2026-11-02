@@ -246,6 +246,12 @@ async function main(){
  await evaluate("document.getElementById('bgct-hidden-caption-wrapper').style.display=''");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"captions restore after ancestor is visible",5000);
  console.log("BGCT HIDDEN ANCESTOR CAPTION PASS — hidden wrappers do not leak stale subtitles.");
+ await evaluate("document.getElementById('bgct-hidden-caption-wrapper').style.opacity='0'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"transparent caption wrapper suppressed",5000);
+ await evaluate("document.getElementById('bgct-hidden-caption-wrapper').style.opacity='1'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"captions restore after wrapper opacity returns",5000);
+ console.log("BGCT TRANSPARENT CAPTION PASS — zero-opacity captions are excluded.");
+
 
 
  // The course player is the large visible video. A small autoplaying promo
