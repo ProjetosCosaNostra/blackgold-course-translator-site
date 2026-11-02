@@ -243,9 +243,14 @@
  }
  function cueFromDom(){
   const node=document.querySelector(captionSelector);
-  if(!node||!node.isConnected||node.hidden||node.getAttribute("aria-hidden")==="true")return null;
-  const style=getComputedStyle(node);
-  if(style.display==="none"||style.visibility==="hidden")return null;
+  if(!node||!node.isConnected)return null;
+  // Udemy can hide the entire caption wrapper without hiding its text node.
+  for(let parent=node;parent&&parent.nodeType===1;parent=parent.parentElement){
+   if(parent.hidden||parent.getAttribute("aria-hidden")==="true")return null;
+   const style=getComputedStyle(parent);
+   if(style.display==="none"||style.visibility==="hidden")return null;
+   if(parent===document.body)break;
+  }
   const text=(node.textContent||"").replace(/\s+/g," ").trim().slice(0,1500);
   return text?{cueId:text,text}:null;
  }
