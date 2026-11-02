@@ -139,7 +139,7 @@ async function main(){
  assert.equal(await evaluate("document.querySelector('#"+panelId+" .bgct-subtitle').textContent"),
   "INTERNAL CANDIDATE • NOT RELEASED");
  const first=await evaluate("({url:location.href,video:document.querySelectorAll('video').length,panel:!!document.getElementById('"+panelId+"')})");
- assert.ok(first.url.includes("/course/local-fixture/learn/"));
+ assert.ok(first.url.includes("/course/blender-5-ue57-stylized-haunted-street-kit/learn/lecture/54950165"));
  assert.equal(first.video,1);
  assert.equal(first.panel,true);
  // Switch target to same language. This verifies the real content script, chrome.storage
@@ -418,7 +418,7 @@ async function main(){
 
  // A lecture title or marketing query may update without changing the lesson.
  // This must NOT cancel a translation that is already in progress.
- await evaluate("(()=>{document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Title changed without navigation';history.replaceState({},'','/course/local-fixture/learn/lecture-1?utm_source=fixture');return true})()");
+ await evaluate("(()=>{document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Title changed without navigation';history.replaceState({},'','/course/blender-5-ue57-stylized-haunted-street-kit/learn/lecture/54950165?utm_source=fixture');return true})()");
  await pause(900);
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests[0].signal.aborted"),false,"Same lecture URL should not abort a translation due to title/UTM changes");
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests.length"),1,"Same lecture URL must not duplicate a translation request");
@@ -467,7 +467,7 @@ async function main(){
 
  // A SPA transition can update the lecture URL before updating the player's
  // caption DOM. The caption from lecture 1 must never be assigned to lecture 2.
- await evaluate("(()=>{history.pushState({},'','/course/local-fixture/learn/lecture-2');document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Synthetic lesson two';return true})()");
+ await evaluate("(()=>{history.pushState({},'','/course/blender-5-ue57-stylized-haunted-street-kit/learn/lecture/54950166');document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Synthetic lesson two';return true})()");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"quarantine old caption at lecture transition",4000);
  await pause(1000);
  assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Old lecture caption must stay hidden until source updates");
@@ -477,7 +477,7 @@ async function main(){
 
  // Repeating the exact phrase in the NEXT lesson must not leave the overlay
  // blocked forever. Only a new cuechange/DOM mutation releases the quarantine.
- await evaluate("history.pushState({},'','/course/local-fixture/learn/lecture-3')");
+ await evaluate("history.pushState({},'','/course/blender-5-ue57-stylized-haunted-street-kit/learn/lecture/54950167')");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"quarantine repeated phrase on next lesson",4000);
  await pause(900);
  assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"No source event: old caption remains blocked");
@@ -490,7 +490,7 @@ async function main(){
  await until(async()=>await evaluate("document.getElementById('"+panelId+"').hidden&&document.getElementById('"+captionId+"').hidden"),"SPA departure cleanup",10000);
  assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"");
  // Extension remains mounted and the panel is restored after returning to a lesson.
- await evaluate("history.pushState({},'','/course/local-fixture/learn/lecture-4')");
+ await evaluate("history.pushState({},'','/course/blender-5-ue57-stylized-haunted-street-kit/learn/lecture/54950168')");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"reentered course",10000);
  assert.equal(await evaluate("document.getElementById('"+panelId+"').hidden"),false,"Returning to a supported lesson must restore the panel");
  console.log("BGCT REAL CHROMIUM MV3 SMOKE PASS — installed unpacked in disposable profile, HTTPS synthetic lesson, scoped injection, DOM captions, same-language passthrough, PT-BR/EN/ES controls, fullscreen where available, lecture SPA, route cleanup.");
