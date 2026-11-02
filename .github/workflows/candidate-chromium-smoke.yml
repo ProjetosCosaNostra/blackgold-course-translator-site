@@ -20,15 +20,21 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Confirm preinstalled Chrome / Chromium
+      - name: Install Chrome for Testing (allows unpacked MV3 extensions)
+        id: chrome_for_testing
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+      - name: Open MV3 candidate in disposable Chrome for Testing on synthetic local HTTPS lesson
+        env:
+          CHROME_PATH: ${{ steps.chrome_for_testing.outputs.chrome-path }}
         run: |
-          command -v google-chrome || command -v google-chrome-stable || command -v chromium
+          "$CHROME_PATH" --version
           openssl version
-      - name: Open MV3 candidate in disposable Chromium on synthetic local HTTPS lesson
-        run: node tools/check-candidate-chromium.mjs
+          node tools/check-candidate-chromium.mjs
