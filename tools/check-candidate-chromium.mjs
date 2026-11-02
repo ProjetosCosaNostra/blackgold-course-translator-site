@@ -273,6 +273,7 @@ async function main(){
   const nativePairStatus=await isolated("(async()=>{try{return await globalThis.Translator.availability({sourceLanguage:'en',targetLanguage:'pt'})}catch(e){return 'error:'+String(e?.name||'unknown')}})()");
   console.log("BGCT NATIVE EN->PT AVAILABILITY ONLY (no model create/download): "+JSON.stringify(nativePairStatus));
   assert.equal(typeof nativePairStatus,"string","Native availability should return a status string");
+  if(nativeProof)assert.ok(["available","downloadable","downloading"].includes(nativePairStatus),"Manual native proof requires an available or downloadable model");
   // Native translation is attempted ONLY if Chrome reports the model ALREADY installed.
   // A downloadable/downloading model must never be created by automated CI.
   if((nativePairStatus==="available"||nativeProof&&["downloadable","downloading"].includes(nativePairStatus))&&nativeProbe.create==="function"){
@@ -318,6 +319,7 @@ async function main(){
   for(const entry of matrix)assert.equal(typeof entry.status,"string");
   console.log("BGCT NATIVE PT/EN/ES AVAILABILITY MATRIX (no create/download): "+JSON.stringify(matrix));
  }
+ if(nativeProof&&nativeProbe.availability!=="function")throw Error("Native Translator API unavailable: manual proof cannot pass");
  const mockScript=String.raw`
  (()=>{
   const mock={availability:[],created:0,destroyed:0,requests:[],setupAttempts:0,failSetupOnce:true};
