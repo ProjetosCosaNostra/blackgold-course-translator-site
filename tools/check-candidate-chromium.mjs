@@ -87,7 +87,8 @@ async function main(){
  launched.push(()=>new Promise(resolve=>server.close(()=>resolve())));
  await new Promise((resolve,reject)=>server.listen(0,"127.0.0.1",err=>err?reject(err):resolve()));
  const port=server.address().port;
- const lessonURL="https://www.udemy.com:"+port+"/course/local-fixture/learn/lecture-1";
+ // Match a real Udemy lecture URL shape, including its lecture ID and hash tab.
+ const lessonURL="https://www.udemy.com:"+port+"/course/blender-5-ue57-stylized-haunted-street-kit/learn/lecture/54950165#overview";
  const chrome=spawn(chromePath(),[
   "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage",
   ...(!nativeProof?["--disable-background-networking","--disable-component-update"]:[]),
