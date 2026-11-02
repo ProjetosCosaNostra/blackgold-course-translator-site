@@ -1,0 +1,34 @@
+name: BGCT candidate MV3 Chromium smoke (synthetic, no deploy)
+on:
+  push:
+    branches:
+      - work/bgct-restart-zero-budget-i18n-20261102
+    paths:
+      - 'extension-candidate/**'
+      - 'extension-staging/**'
+      - 'tools/check-candidate-chromium.mjs'
+      - '.github/workflows/candidate-chromium-smoke.yml'
+  pull_request:
+    paths:
+      - 'extension-candidate/**'
+      - 'extension-staging/**'
+      - 'tools/check-candidate-chromium.mjs'
+      - '.github/workflows/candidate-chromium-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm preinstalled Chrome / Chromium
+        run: |
+          command -v google-chrome || command -v google-chrome-stable || command -v chromium
+          openssl version
+      - name: Open MV3 candidate in disposable Chromium on synthetic local HTTPS lesson
+        run: node tools/check-candidate-chromium.mjs
