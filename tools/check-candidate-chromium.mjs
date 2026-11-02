@@ -257,6 +257,8 @@ async function main(){
  // If the course video becomes hidden, reject it and select only visible
  // alternatives. Restore course player to prove correct handback.
  await evaluate("document.querySelector('video').style.display='none'");
+ await until(async()=>await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').disabled"),"activation disabled without a visible player",5000);
+
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Incorrect preview captions'"),
   "visible preview chosen after course player disappears",5000);
  await evaluate("document.querySelector('video').style.display='block'");
