@@ -44,4 +44,13 @@ assert.ok(!/\binnerHTML\s*=/.test(script),"Do not inject subtitle markup as HTML
 for(const lib of ["catalogs.js","locale-core.js","translator-api-adapter.js","caption-coordinator.js","session-controller.js"]){
  assert.equal(read("lib/"+lib),fs.readFileSync(path.join(root,"..","extension-staging",lib),"utf8"),"Staging library drift: "+lib);
 }
+// Keep native model downloads out of every automatic candidate smoke.
+const nativeWorkflow=fs.readFileSync(path.join(root,"..",".github","workflows","candidate-native-manual.yml"),"utf8");
+const browserSmoke=fs.readFileSync(path.join(root,"..","tools","check-candidate-chromium.mjs"),"utf8");
+assert.ok(nativeWorkflow.includes("workflow_dispatch:"),"Native proof must require manual dispatch");
+assert.ok(!/^[ ]{2}(push|pull_request|schedule):/m.test(nativeWorkflow),"Native proof must not be automatic");
+assert.ok(nativeWorkflow.includes("inputs.consent == 'NATIVE_MODEL_DOWNLOAD_OK'"),"Native proof requires explicit consent gate");
+assert.ok(nativeWorkflow.includes("BGCT_NATIVE_PROOF: explicit-manual-opt-in"),"Manual proof environment marker missing");
+assert.ok(browserSmoke.includes('process.env.BGCT_NATIVE_PROOF==="explicit-manual-opt-in"'),"Default smoke must keep downloads disabled");
+console.log("BGCT NATIVE MANUAL-GATE PASS: no automatic model downloads.");
 console.log("BGCT MV3 CANDIDATE PASS: manifest, scoped pages, valid icon, locale assets, script parsing, library parity, click flow and privacy.");
