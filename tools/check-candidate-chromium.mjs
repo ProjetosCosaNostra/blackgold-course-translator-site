@@ -280,7 +280,7 @@ async function main(){
   if((nativePairStatus==="available"||nativeProof&&["downloadable","downloading"].includes(nativePairStatus))&&nativeProbe.create==="function"){
    const nativeResult=await isolated(`(async()=>{
     const abort=new AbortController();
-    const limit=setTimeout(()=>abort.abort(),nativeProof?90000:12000);
+    const limit=setTimeout(()=>abort.abort(),${nativeProof?90000:12000});
     let session;
     try{
      session=await Promise.race([
