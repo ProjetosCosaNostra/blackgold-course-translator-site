@@ -239,6 +239,9 @@
    // An actual TextTrack cuechange or caption DOM mutation is evidence of a
    // new cue even when two consecutive lessons use the identical phrase.
    blockedPreviousCue=null;blockedCaptionVersion=null;
+   // The quarantined key was recorded as lastCue while suppressed. It has not
+   // been rendered, so force the same text through the new lesson's coordinator.
+   lastCue=null;
   }
   if(cueKey!==lastCue){lastCue=cueKey;void session.showCue(cue).catch(()=>{})}
   refresh();
