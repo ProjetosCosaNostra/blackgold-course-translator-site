@@ -262,9 +262,13 @@
   if(!panel.isConnected||!caption.isConnected)reposition();
   const current=getVideo();
   if(current!==video){
+   // A replacement lecture player can arrive while the old caption DOM
+   // still shows the previous video's final cue. Quarantine that exact cue.
+   const inheritedCue=video?lastCue:null;
    video=current;lastCue=null;lastMeaningfulCue=null;mediaBoundaryCue=null;
    mediaSource=readMediaSource(video);mediaRevision=0;lastLesson=null;
-   blockedPreviousCue=null;blockedCaptionVersion=null;cancelCaption();
+   blockedPreviousCue=inheritedCue;blockedCaptionVersion=inheritedCue!==null?captionEventVersion:null;
+   cancelCaption();
   }else if(video){
    const nextSource=readMediaSource(video);
    if(nextSource!==mediaSource){mediaSource=nextSource;mediaSourceChanged()}
@@ -279,9 +283,11 @@
    // The player and DOM can still contain the previous lecture's captions
    // while a single-page navigation switches the lecture URL.
    // Quarantine exactly that last source cue until the caption source changes.
-   blockedPreviousCue=mediaBoundaryCue!==null?mediaBoundaryCue:
-    lastLesson!==null?lastCue:null;
-   blockedCaptionVersion=blockedPreviousCue!==null?captionEventVersion:null;
+   if(blockedPreviousCue===null){
+    blockedPreviousCue=mediaBoundaryCue!==null?mediaBoundaryCue:
+     lastLesson!==null?lastCue:null;
+    blockedCaptionVersion=blockedPreviousCue!==null?captionEventVersion:null;
+   }
    mediaBoundaryCue=null;lastMeaningfulCue=null;
    lastLesson=key;lastCue=null;
    void session.setLesson(lesson).then(()=>refresh()).catch(()=>refresh());
