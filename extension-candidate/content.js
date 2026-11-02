@@ -12,7 +12,7 @@
  const localeApi=globalThis.BGCT_STAGING_LOCALE;
  const factory=globalThis.BGCT_STAGING_SESSION;
  if(!localeApi||!factory||!document.body)return;
- let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,lastCue=null;
+ let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,inactive=false,lastCue=null;
  let observedVideo=null,observedTracks=[],observedCaption=null,captionObserver=null,endedVideo=null;
  const captionSelector='[data-purpose="captions-display"],[data-purpose="captions-container"],[class*="captions-display--captions-container"]';
  const tags={en:"English",pt:"Português",es:"Español"};
@@ -90,8 +90,19 @@
   const p=session.activateFromGesture();
   void p.then(result=>{if(result?.ok)lastCue=null;sync();refresh()}).catch(()=>refresh());
  });
- hide.addEventListener("click",()=>{panel.hidden=true});
- clear.addEventListener("click",()=>{panel.hidden=true;cancelCaption()});
+ function deactivatePanel(){
+  if(closed||inactive)return;
+  inactive=true;
+  panel.hidden=true;
+  lastLesson=null;lastCue=null;
+  stopWatchingVideo();stopWatchingCaptions();
+  // Fail closed: release the model and all private course/caption caches.
+  session.setLesson(null);
+  frame=null;caption.textContent="";caption.hidden=true;
+  refresh();
+ }
+ hide.addEventListener("click",deactivatePanel);
+ clear.addEventListener("click",deactivatePanel);
  ecosystem.addEventListener("click",()=>{note.hidden=!note.hidden});
  function reposition(){
   const host=document.fullscreenElement||document.body;
@@ -181,7 +192,7 @@
   return text?{cueId:text,text}:null;
  }
  function sync(){
-  if(closed)return;
+  if(closed||inactive)return;
   if(!isAllowedPage()){
    // On SPA navigation outside the approved lesson path, erase the old course,
    // loaded model and cached transcripts. Do it only once per departure.
@@ -207,8 +218,14 @@
  }
  try{chrome.runtime.onMessage.addListener((message,_sender,respond)=>{
   if(!message||message.channel!=="bgct-candidate")return;
-  if(message.type==="open"){panel.hidden=false;reposition();sync();respond({ok:true});return}
-  if(message.type==="status"){respond({ok:true,candidate:true,state:session.snapshot().modelState,hasVideo:Boolean(video)});return}
+  if(message.type==="open"){
+   inactive=false;panel.hidden=false;reposition();sync();
+   respond({ok:true});return
+  }
+  if(message.type==="status"){
+   respond({ok:true,candidate:true,state:session.snapshot().modelState,hasVideo:Boolean(video),inactive});
+   return
+  }
   respond({ok:false});
  });}catch{}
  async function init(){

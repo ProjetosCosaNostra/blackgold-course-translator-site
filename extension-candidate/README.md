@@ -25,3 +25,6 @@ New Chrome for Testing synthetic-browser checks cover these cases; real Udemy be
 
 ## Manual recovery after model setup failure
 If native Translator.create() throws, rejects, or yields a session without translate(), the adapter preserves the previously inspected pair and re-enables an explicitly user-activated retry button. The browser never retries or downloads automatically, and the code remains guarded against stale results after closing or changing languages. The CI Chrome for Testing fixture simulates a failed first gesture and a successful second gesture. No real language model download or real Udemy lecture was used.
+
+## Close/reopen memory safety
+The X and Close panel actions now stop watching captions, clear translated text and caches, release the model and pause background polling. Only an explicit popup open restores the panel; the learner must activate the model again. The Chrome for Testing synthetic flow verifies model disposal, no hidden translation work, and explicit reopening without automatic downloads. No real Udemy account or original 0.6.0 source was tested.

@@ -336,6 +336,33 @@ async function main(){
  await until(async()=>await evaluate("!document.getElementById('bgct-candidate-panel').hidden"),"panel reopened by popup runtime message",6000);
  console.log("BGCT REAL CHROME POPUP PASS — actual extension page, PT-BR/EN/ES labels, chrome.storage persistence, tab messaging and panel reopening.");
 
+ // Closing the actual panel must discard private model and subtitle memory.
+ await evaluate("(()=>{const e=document.getElementById('bgct-candidate-target');e.value='pt';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.availability.length>=2"),"availability on second translated session",7000);
+ await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').click()",true);
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.created===2"),"second model creation before closing",7000);
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>=5"),"last pending translation before closing",7000);
+ const callsBeforeClose=await isolated("globalThis.__BGCT_TEST_MOCK.requests.length");
+ await evaluate("document.querySelector('#bgct-candidate-panel .bgct-actions button:last-child').click()",true);
+ assert.equal(await evaluate("document.getElementById('bgct-candidate-panel').hidden"),true);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.destroyed"),2,"Closing must release model");
+ const statusAfterClose=await popupEval("chrome.tabs.sendMessage("+lessonTabId+",{channel:'bgct-candidate',type:'status'})");
+ assert.equal(statusAfterClose?.inactive,true);
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Caption while panel closed'");
+ await pause(950);
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests.length"),callsBeforeClose,"Closed panel must not continue translating");
+ assert.equal(await evaluate("document.getElementById('bgct-candidate-panel').hidden"),true);
+ const openAfterClose=await popupEval("chrome.tabs.sendMessage("+lessonTabId+",{channel:'bgct-candidate',type:'open'})");
+ assert.equal(openAfterClose?.ok,true);
+ await until(async()=>await evaluate("!document.getElementById('bgct-candidate-panel').hidden"),"manual reopening after privacy cleanup");
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.availability.length>=3"),"fresh passive availability after reopening");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.created"),2,"No model creation on popup reopening");
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Model must wait for gesture after reopening");
+ console.log("BGCT CHROME CLOSE/REOPEN PASS — model destroyed, captions cleared, hidden session paused, explicit reopening without automatic download.");
+
+
 }
 try{await main()}catch(e){
  console.error("BGCT CHROMIUM SMOKE FAILED:",e?.stack||String(e));
