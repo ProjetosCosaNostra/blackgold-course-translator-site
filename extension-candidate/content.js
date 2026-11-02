@@ -112,7 +112,10 @@
  function sync(){
   if(closed)return;
   if(!allowed.test(location.href)){
-   panel.hidden=true;cancelCaption();lastLesson=null;lastCue=null;video=null;
+   // On SPA navigation outside the approved lesson path, erase the old course,
+   // loaded model and cached transcripts. Do it only once per departure.
+   if(lastLesson!==null){lastLesson=null;void session.setLesson(null)}
+   panel.hidden=true;caption.textContent="";caption.hidden=true;lastCue=null;video=null;
    refresh();return;
   }
   if(!panel.isConnected||!caption.isConnected)reposition();
