@@ -18,3 +18,7 @@ Before release: retrieve full original source; compare requirements, behavior an
 
 ## Retry recovery in candidate
 When the local model produces an error for a nonempty cue, the in-page button becomes a localized Retry translation control. It submits the same cue again without creating/downloading a second model. The real Chrome for Testing synthetic fixture checks empty output, translated error status, recovery and model reuse; no actual Udemy page or native translation model is tested.
+
+## Event-driven captions and stable lecture identity (2026-11-02)
+The candidate listens to active video seek/seeked/play/ended/emptied events, active TextTrack cuechange and MutationObserver updates on the caption container, while retaining periodic polling as a fallback. The subtitle overlay is hidden immediately during seeking and after playback ends, avoiding re-display of obsolete DOM text. Video listeners and DOM observers are removed on navigation out of a supported course and on pagehide. Lecture identity is URL-based, falling back to the title only when there is no lecture ID in the path or query, so title/UTM changes do not reset a running translation.
+New Chrome for Testing synthetic-browser checks cover these cases; real Udemy behavior and installed 0.6.0 parity remain unvalidated.

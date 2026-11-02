@@ -13,6 +13,8 @@
  const factory=globalThis.BGCT_STAGING_SESSION;
  if(!localeApi||!factory||!document.body)return;
  let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,lastCue=null;
+ let observedVideo=null,observedTracks=[],observedCaption=null,captionObserver=null,endedVideo=null;
+ const captionSelector='[data-purpose="captions-display"],[data-purpose="captions-container"],[class*="captions-display--captions-container"]';
  const tags={en:"English",pt:"Português",es:"Español"};
  const panel=document.createElement("section");panel.id=namespace+"-panel";
  panel.setAttribute("aria-label","BlackGold Course Translator internal candidate");
@@ -97,6 +99,53 @@
   if(caption.parentNode!==host)host.appendChild(caption);
  }
  document.addEventListener("fullscreenchange",reposition);
+ // React to player activity immediately; the 700ms poll remains a defensive fallback.
+ function cueChanged(){if(!closed)sync()}
+ function onSeekStart(){lastCue=null;cancelCaption()}
+ function onMediaEnd(){endedVideo=video;lastCue=null;cancelCaption()}
+ function onMediaResume(){endedVideo=null;lastCue=null;sync()}
+ function stopWatchingVideo(){
+  if(observedVideo){
+   observedVideo.removeEventListener("seeking",onSeekStart);
+   observedVideo.removeEventListener("seeked",onMediaResume);
+   observedVideo.removeEventListener("play",onMediaResume);
+   observedVideo.removeEventListener("ended",onMediaEnd);
+   observedVideo.removeEventListener("emptied",onMediaEnd);
+  }
+  for(const track of observedTracks){try{track.removeEventListener("cuechange",cueChanged)}catch{}}
+  observedTracks=[];observedVideo=null;endedVideo=null;
+ }
+ function watchVideo(current){
+  if(current!==observedVideo){
+   stopWatchingVideo();
+   observedVideo=current;
+   if(current){
+    current.addEventListener("seeking",onSeekStart);
+    current.addEventListener("seeked",onMediaResume);
+    current.addEventListener("play",onMediaResume);
+    current.addEventListener("ended",onMediaEnd);
+    current.addEventListener("emptied",onMediaEnd);
+   }
+  }
+  const tracks=current?.textTracks?Array.from(current.textTracks):[];
+  for(const track of observedTracks){
+   if(!tracks.includes(track)){try{track.removeEventListener("cuechange",cueChanged)}catch{}}
+  }
+  for(const track of tracks){
+   if(!observedTracks.includes(track)){try{track.addEventListener("cuechange",cueChanged)}catch{}}
+  }
+  observedTracks=tracks;
+ }
+ function watchCaptionNode(){
+  const node=document.querySelector(captionSelector);
+  if(node===observedCaption)return;
+  captionObserver?.disconnect();captionObserver=null;observedCaption=node;
+  if(node&&typeof MutationObserver==="function"){
+   captionObserver=new MutationObserver(()=>{if(!closed)sync()});
+   captionObserver.observe(node,{subtree:true,childList:true,characterData:true});
+  }
+ }
+ function stopWatchingCaptions(){captionObserver?.disconnect();captionObserver=null;observedCaption=null}
  function getVideo(){
   const all=[...document.querySelectorAll("video")];
   return all.find(v=>!v.paused&&v.clientWidth&&v.clientHeight)||all.find(v=>v.clientWidth&&v.clientHeight)||all[0]||null;
@@ -105,7 +154,12 @@
   const u=new URL(location.href),course=u.pathname.match(/\/course\/([^/]+)\/learn\//);
   if(!course)return null;
   const title=document.querySelector('[data-purpose="lecture-title"]')?.textContent?.trim()||document.title||"";
-  const lecture=u.pathname+"?"+u.searchParams.toString()+"|"+title.slice(0,150);
+  // Use a stable lecture ID from the URL; title/marketing query changes are not
+  // new lessons and must not abort captions or model preparation.
+  const explicitId=["lectureId","lecture_id","lecture","itemId","item_id"]
+   .map(key=>u.searchParams.get(key)).find(value=>value&&value.trim());
+  const suffix=u.pathname.split("/learn/")[1]||"";
+  const lecture=u.pathname+(explicitId?"|"+explicitId:(!suffix?"|"+title.slice(0,150):""));
   return {courseId:course[1],lectureId:lecture,sourceLanguage:source,targetLanguage:target};
  }
  function cueFromTrack(element){
@@ -120,7 +174,7 @@
   return null;
  }
  function cueFromDom(){
-  const node=document.querySelector('[data-purpose="captions-display"],[data-purpose="captions-container"],[class*="captions-display--captions-container"]');
+  const node=document.querySelector(captionSelector);
   if(!node)return null;
   const text=(node.textContent||"").replace(/\s+/g," ").trim().slice(0,1500);
   return text?{cueId:text,text}:null;
@@ -132,17 +186,20 @@
    // loaded model and cached transcripts. Do it only once per departure.
    if(lastLesson!==null){lastLesson=null;void session.setLesson(null)}
    panel.hidden=true;caption.textContent="";caption.hidden=true;lastCue=null;video=null;
-   refresh();return;
+   stopWatchingVideo();stopWatchingCaptions();refresh();return;
   }
   if(!panel.isConnected||!caption.isConnected)reposition();
   const current=getVideo();
   if(current!==video){video=current;lastCue=null;lastLesson=null;cancelCaption()}
+  watchVideo(video);
+  watchCaptionNode();
   if(!video){refresh();return}
   const lesson=getLesson();
   if(!lesson){cancelCaption();refresh();return}
   const key=JSON.stringify(lesson);
   if(key!==lastLesson){lastLesson=key;lastCue=null;void session.setLesson(lesson).then(()=>refresh()).catch(()=>refresh())}
-  const cue=cueFromTrack(video)||cueFromDom()||{text:""};
+  const cue=video.seeking||video.ended||endedVideo===video
+   ?{text:""}:cueFromTrack(video)||cueFromDom()||{text:""};
   const cueKey=JSON.stringify(cue);
   if(cueKey!==lastCue){lastCue=cueKey;void session.showCue(cue).catch(()=>{})}
   refresh();
@@ -173,6 +230,9 @@
   refresh();
  });}catch{}
  const timer=setInterval(sync,700);
- window.addEventListener("pagehide",()=>{closed=true;clearInterval(timer);session.close();caption.remove();panel.remove()},{once:true});
+ window.addEventListener("pagehide",()=>{
+  closed=true;clearInterval(timer);stopWatchingVideo();stopWatchingCaptions();
+  session.close();caption.remove();panel.remove();
+ },{once:true});
  void init();
 })();

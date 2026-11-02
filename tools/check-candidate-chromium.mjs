@@ -143,6 +143,23 @@ async function main(){
  const sourceText=await evaluate("document.getElementById('"+captionId+"').textContent");
  assert.equal(sourceText,"Synthetic English caption");
 
+ // Seeking and ended video events must immediately clear stale subtitles,
+ // rather than waiting for the periodic 700ms poll to catch a DOM update.
+ assert.equal(await evaluate("(()=>{const v=document.querySelector('video');v.dispatchEvent(new Event('seeking'));return document.getElementById('"+captionId+"').hidden})()"),true,"Seeking must clear previous subtitle immediately");
+ await evaluate("document.querySelector('video').dispatchEvent(new Event('seeked'))");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"subtitle restored after seeking",4000);
+ assert.equal(await evaluate("(()=>{document.querySelector('video').dispatchEvent(new Event('ended'));return document.getElementById('"+captionId+"').hidden})()"),true,"End of video must clear subtitle immediately");
+ await pause(950);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Polling must not bring back ended-video caption");
+ await evaluate("document.querySelector('video').dispatchEvent(new Event('play'))");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"captions resume on playback",4000);
+ // The DOM captions container also drives event-based updates.
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Event-driven English cue'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Event-driven English cue'"),"DOM MutationObserver caption update",4000);
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Synthetic English caption'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"restore fixture cue",4000);
+
+
  // In a real browser, language changes must update the in-page controls without reloading.
  await evaluate("(()=>{const e=document.getElementById('bgct-candidate-ui');e.value='pt_BR';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
  await until(async()=>await evaluate("document.querySelector('label[for=\"bgct-candidate-ui\"]')?.textContent==='Idioma da interface'"),"PT-BR controls",6000);
@@ -219,6 +236,14 @@ async function main(){
  await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.created===1"),"model created by in-page action");
  await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>=1"),"first model translation request");
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests[0].text"),"Synthetic English caption");
+
+ // A lecture title or marketing query may update without changing the lesson.
+ // This must NOT cancel a translation that is already in progress.
+ await evaluate("(()=>{document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Title changed without navigation';history.replaceState({},'','/course/local-fixture/learn/lecture-1?utm_source=fixture');return true})()");
+ await pause(900);
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests[0].signal.aborted"),false,"Same lecture URL should not abort a translation due to title/UTM changes");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests.length"),1,"Same lecture URL must not duplicate a translation request");
+
  assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"","No flash of untranslated original sentence");
  await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Fast second sentence'");
  await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>=2"),"second translated caption request");
