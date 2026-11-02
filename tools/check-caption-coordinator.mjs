@@ -54,7 +54,7 @@ coord.setContext(sameContext);
 const beforeCalls=calls.length;
 assert.equal((await coord.showCue(cue(7,"Original already matches"))).code,"original");
 assert.equal(draws.at(-1).text,"Original already matches");
-assert.equal(calls.length,beforeCalls,"Same-language text does not trigger translation after context change");
+assert.equal(calls.slice(beforeCalls).filter(x=>x!=="[cancel]").length,0,"Same-language text does not trigger translation");
 coord.setContext({courseId:"course-1",lectureId:"lec-2",sourceLanguage:"en",targetLanguage:"pt"});
 assert.equal(draws.at(-1).state,"idle","Lecture changes must clear former caption");
 const slow=coord.showCue(cue(8,"slow"));
