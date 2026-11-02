@@ -66,8 +66,16 @@ function makeCoordinator(config={}){
  }
  function showCue(cue){
   if(!context){emit("error","",{reason:"missing-context"});return Promise.resolve({ok:false,code:"missing-context"})}
-  const text=cue&&typeof cue.text==="string"?cue.text:"";
-  const meta=cue&&typeof cue==="object"?cue:{};
+  // A missing/invalid caption is not the same as a legitimate empty caption.
+  // This prevents DOM extraction failures from silently appearing as no speech.
+  if(!cue||typeof cue!=="object"||typeof cue.text!=="string"){
+   ++revision;activeKey=null;activePromise=null;
+   if(typeof runtime.cancelPending==="function")runtime.cancelPending();
+   emit("error","",{reason:"invalid-cue"});
+   return Promise.resolve({ok:false,code:"invalid-cue"});
+  }
+  const text=cue.text;
+  const meta=cue;
   const key=JSON.stringify([
    context.courseId,context.lectureId,context.sourceLanguage,context.targetLanguage,
    String(meta.cueId??""),Number.isFinite(meta.startMs)?meta.startMs:null,
@@ -112,7 +120,12 @@ function makeCoordinator(config={}){
    // Do not memoize failures: a missing local model or transient empty result
    // must be retryable when the browser becomes ready.
    activeKey=null;activePromise=null;
-   if(result?.code==="stale")return {ok:false,code:"stale"};
+   if(result?.code==="stale"){
+    // The generation is still current: this cancellation came from the runtime,
+    // not from a new cue. Report it and allow the same cue to be requested again.
+    emit("error","",{...detail,reason:"stale-translation"});
+    return {ok:false,code:"stale"};
+   }
    const reason=result?.code==="translated"?"empty-output":String(result?.code||"unknown-translation-error");
    emit("error","",{...detail,reason});
    return {ok:false,code:reason};

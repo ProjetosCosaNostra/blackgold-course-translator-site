@@ -126,4 +126,35 @@ assert.equal(emptyCoord.snapshot().cacheSize,0);
 assert.equal((await emptyCoord.showCue(sameCue)).code,"translated","Failed cue is retryable");
 assert.equal(emptyAttempts,2);
 assert.equal(emptyCoord.snapshot().cacheSize,1);
+
+const staleScreens=[];
+let staleAttempts=0;
+const recoverable=make({runtime:{
+ translate:async()=>{staleAttempts++;return staleAttempts===1?{ok:false,code:"stale"}:{ok:true,code:"translated",text:"Repetição correta"}},
+ cancelPending(){}
+},onRender:view=>staleScreens.push(view)});
+recoverable.setContext({courseId:"retry-course",lectureId:"chapter",sourceLanguage:"en",targetLanguage:"pt"});
+const retryCue={cueId:"retry-1",text:"Translate again"};
+assert.equal((await recoverable.showCue(retryCue)).code,"stale");
+assert.equal(staleScreens.at(-1).state,"error","Cancellation with no newer cue must not be silent");
+assert.equal(staleScreens.at(-1).reason,"stale-translation");
+assert.equal((await recoverable.showCue(retryCue)).code,"translated","Retry a cancelled cue without changing lecture");
+assert.equal(staleAttempts,2);
+
+const invalidScreens=[],pendingInvalid=[];
+const malformed=make({runtime:{
+ translate:()=>new Promise(resolve=>pendingInvalid.push(resolve)),
+ cancelPending(){}
+},onRender:view=>invalidScreens.push(view)});
+malformed.setContext({courseId:"course",lectureId:"lecture",sourceLanguage:"en",targetLanguage:"es"});
+const unfinished=malformed.showCue({cueId:"current",text:"still processing"});
+assert.equal((await malformed.showCue({cueId:"broken"})).code,"invalid-cue");
+assert.equal(invalidScreens.at(-1).state,"error","Missing text must be visible error");
+assert.equal(invalidScreens.at(-1).reason,"invalid-cue");
+pendingInvalid[0]({ok:true,code:"translated",text:"obsolete"});
+assert.equal((await unfinished).code,"stale");
+assert.equal(invalidScreens.at(-1).state,"error","Former cue must not restore output after invalid input");
+assert.equal((await malformed.showCue(null)).code,"invalid-cue");
+assert.equal((await malformed.showCue({cueId:"valid-empty",text:""})).code,"no-caption","Genuinely empty cue remains distinct");
+
 console.log("BGCT CAPTION COORDINATOR PASS — no source flash, stale cue/lecture suppression, duplicate dedupe, bounded cache, errors, language and context.");

@@ -60,3 +60,11 @@ Full original extension source, real Chrome/Edge tests, actual Udemy caption int
 - O coordenador bloqueia o cache de resultados vazios mesmo quando o runtime não aplica a verificação. Falhas não ficam memorizadas como resposta definitiva: repetir a mesma legenda depois de recuperar o modelo tenta novamente.
 - Testes dedicados nos dois módulos e no teste conjunto verificam erro visível, ausência de cache e recuperação após nova tentativa.
 - Esse caso foi validado por mocks no GitHub Actions, NÃO pela extensão 0.6.0 instalada.
+
+
+## 2026-11-02 — diferenciação entre legendas ausentes e dados inválidos
+- BUG no coordenador em staging: um evento sem `text` de tipo `string` era tratado como texto vazio legítimo e escondia erros na leitura do DOM de legendas.
+- Agora `showCue(null)` ou objetos sem `text` textual devolvem `invalid-cue` e exibem estado de erro, descartando a requisição anterior. Um `text: ""` legítimo continua sendo `no-caption`.
+- Outro bug: resposta `stale` do runtime, quando não há legenda mais recente, deixava a promise anterior memorizada, bloqueando uma nova tentativa. Agora a resposta antiga é liberada e a tentativa seguinte pode prosseguir; a falha é explicitada como `stale-translation`.
+- Testes: evento de legenda com texto ausente, resultado obsoleto, legenda genuinamente vazia e nova tentativa após cancelamento, todos cobertos por `tools/check-caption-coordinator.mjs`.
+- Nota: testes na branch staging com simulação do runtime, sem prova de compatibilidade com a extensão 0.6.0 instalada.
