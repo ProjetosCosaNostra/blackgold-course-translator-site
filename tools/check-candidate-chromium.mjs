@@ -257,7 +257,6 @@ async function main(){
  // If the course video becomes hidden, reject it and select only visible
  // alternatives. Restore course player to prove correct handback.
  await evaluate("document.querySelector('video').style.display='none'");
- await until(async()=>await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').disabled"),"activation disabled without a visible player",5000);
 
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Incorrect preview captions'"),
   "visible preview chosen after course player disappears",5000);
@@ -280,6 +279,7 @@ async function main(){
  // previous cue quarantined across the interval without any visible video.
  await evaluate("document.querySelector('#player-wrapper video').style.display='none'");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"old player removed",5000);
+ await until(async()=>await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').disabled"),"activation disabled without a visible player",5000);
  await pause(950);
  await evaluate("(()=>{const v=document.createElement('video');v.id='bgct-gap-player';v.style.cssText='display:block;width:710px;height:400px';document.getElementById('player-wrapper').appendChild(v);return true})()");
  await pause(950);
