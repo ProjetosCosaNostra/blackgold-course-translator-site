@@ -50,10 +50,11 @@ function fixtureHTML(){
 }
 function openCDP(socketURL){
  const ws=new WebSocket(socketURL);
- const outstanding=new Map();
+ const outstanding=new Map(),events=[];
  let next=1;
  ws.addEventListener("message",ev=>{
   const item=JSON.parse(typeof ev.data==="string"?ev.data:String(ev.data));
+  if(!item.id&&["Runtime.exceptionThrown","Log.entryAdded","Runtime.consoleAPICalled","Page.frameNavigated"].includes(item.method))events.push(item);
   if(item.id&&outstanding.has(item.id)){
    const {resolve,reject}=outstanding.get(item.id);outstanding.delete(item.id);
    if(item.error)reject(Error(JSON.stringify(item.error)));
@@ -66,7 +67,7 @@ function openCDP(socketURL){
   ws.send(JSON.stringify({id,method,params}));
   return Promise.race([done,timeout(12000,"CDP call timed out: "+method)]);
  }
- return {ws,ready:new Promise((resolve,reject)=>{
+ return {ws,events,ready:new Promise((resolve,reject)=>{
   ws.addEventListener("open",resolve,{once:true});
   ws.addEventListener("error",reject,{once:true});
  }),call,close:()=>ws.close()};
@@ -92,7 +93,12 @@ async function main(){
  ],{stdio:["ignore","ignore","pipe"]});
  let stderr="";
  chrome.stderr.on("data",d=>{stderr+=String(d);if(stderr.length>25000)stderr=stderr.slice(-20000)});
- launched.push(()=>{if(!chrome.killed)chrome.kill("SIGKILL")});
+ launched.push(async()=>{
+  if(chrome.exitCode!==null||chrome.signalCode)return;
+  const exited=new Promise(resolve=>chrome.once('exit',resolve));
+  try{chrome.kill('SIGKILL')}catch{}
+  await Promise.race([exited,pause(2500)]);
+ });
  const portFile=path.join(profile,"DevToolsActivePort");
  const portContent=await until(()=>fs.existsSync(portFile)&&fs.readFileSync(portFile,"utf8").trim(),"DevToolsActivePort",15000);
  const debugPort=Number(portContent.split("\n")[0]);
@@ -105,13 +111,24 @@ async function main(){
  launched.push(()=>cdp.close());
  await cdp.call("Page.enable");
  await cdp.call("Runtime.enable");
+ await cdp.call("Log.enable");
  async function evaluate(expression,gesture=false){
   const ans=await cdp.call("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true,userGesture:gesture});
   if(ans.exceptionDetails)throw Error("Browser JS error: "+JSON.stringify(ans.exceptionDetails).slice(0,750));
   return ans.result?.value;
  }
  const panelId="bgct-candidate-panel",captionId="bgct-candidate-caption";
- await until(async()=>await evaluate("Boolean(document.getElementById('"+panelId+"'))"),"actual MV3 injection",15000);
+ try{
+  await until(async()=>await evaluate("Boolean(document.getElementById("+JSON.stringify(panelId)+"))"),"actual MV3 injection",15000);
+ }catch(e){
+  const page=await evaluate("({url:location.href,title:document.title,body:document.body?.innerText?.slice(0,900),video:document.querySelectorAll('video').length})").catch(err=>({error:String(err)}));
+  const targets=await cdp.call("Target.getTargets").catch(err=>({error:String(err)}));
+  console.error("CHROMIUM DEBUG PAGE:",JSON.stringify(page));
+  console.error("CHROMIUM DEBUG TARGETS:",JSON.stringify(targets?.targetInfos?.map(x=>({type:x.type,url:x.url,title:x.title})).slice(0,18)));
+  console.error("CHROMIUM DEBUG EVENTS:",JSON.stringify(cdp.events.slice(-15)).slice(0,5000));
+  console.error("CHROMIUM STDERR:",stderr.slice(-2600));
+  throw e;
+ }
  assert.equal(await evaluate("document.querySelector('#"+panelId+" .bgct-subtitle').textContent"),
   "INTERNAL CANDIDATE • NOT RELEASED");
  const first=await evaluate("({url:location.href,video:document.querySelectorAll('video').length,panel:!!document.getElementById('"+panelId+"')})");
@@ -143,5 +160,6 @@ try{await main()}catch(e){
  process.exitCode=1;
 }finally{
  for(const close of launched.reverse())try{await close()}catch{}
- fs.rmSync(tmp,{recursive:true,force:true,maxRetries:4,retryDelay:100});
+ try{fs.rmSync(tmp,{recursive:true,force:true,maxRetries:15,retryDelay:200})}
+ catch(e){console.error("Fixture cleanup warning:",String(e))}
 }
