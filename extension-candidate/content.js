@@ -159,8 +159,31 @@
  }
  function stopWatchingCaptions(){captionObserver?.disconnect();captionObserver=null;observedCaption=null}
  function getVideo(){
-  const all=[...document.querySelectorAll("video")];
-  return all.find(v=>!v.paused&&v.clientWidth&&v.clientHeight)||all.find(v=>v.clientWidth&&v.clientHeight)||all[0]||null;
+  // A lesson page can also have a tiny autoplaying preview. Do not treat
+  // the first playing <video> as the lecture when a larger player is visible.
+  const fullscreen=document.fullscreenElement;
+  const visible=[];
+  for(const candidate of document.querySelectorAll("video")){
+   if(!candidate.isConnected||candidate.hidden)continue;
+   if(fullscreen&&fullscreen!==candidate&&!fullscreen.contains(candidate))continue;
+   const style=getComputedStyle(candidate);
+   if(style.display==="none"||style.visibility==="hidden"||Number(style.opacity)===0)continue;
+   const box=candidate.getBoundingClientRect();
+   if(box.width<160||box.height<90)continue;
+   const screenWidth=innerWidth||document.documentElement.clientWidth;
+   const screenHeight=innerHeight||document.documentElement.clientHeight;
+   if(box.right<=0||box.bottom<=0||box.left>=screenWidth||box.top>=screenHeight)continue;
+   const area=Math.min(box.right,screenWidth)-Math.max(box.left,0);
+   const height=Math.min(box.bottom,screenHeight)-Math.max(box.top,0);
+   const visibleArea=Math.max(0,area)*Math.max(0,height);
+   if(!visibleArea)continue;
+   visible.push({element:candidate,score:visibleArea*(candidate.paused?1:1.15)});
+  }
+  if(!visible.length)return null; // Never attach to an off-screen/hidden video.
+  visible.sort((a,b)=>b.score-a.score);
+  // Keep a stable player if a similarly-sized promo briefly starts playing.
+  const previous=visible.find(item=>item.element===observedVideo);
+  return previous&&previous.score>=visible[0].score*0.9?previous.element:visible[0].element;
  }
  function getLesson(){
   const u=new URL(location.href),course=u.pathname.match(/\/course\/([^/]+)\/learn\//);

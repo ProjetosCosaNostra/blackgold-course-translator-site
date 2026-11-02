@@ -161,6 +161,40 @@ async function main(){
 
 
 
+
+ // The course player is the large visible video. A small autoplaying promo
+ // must not hijack the subtitle coordinator, even when it has active cues.
+ const previewSetup=String.raw`
+ (()=>{
+  const promo=document.createElement("video");
+  promo.id="bgct-smoke-preview";
+  promo.muted=true;
+  promo.setAttribute("aria-label","Unrelated preview");
+  promo.style.cssText="display:block;position:fixed;right:16px;top:16px;width:220px;height:124px;z-index:1;background:#333";
+  document.body.appendChild(promo);
+  Object.defineProperty(promo,"paused",{configurable:true,value:false});
+  Object.defineProperty(promo,"textTracks",{configurable:true,value:[
+   {language:"en",mode:"showing",activeCues:[{id:"preview",startTime:0,endTime:4,text:"Incorrect preview captions"}],
+    addEventListener(){},removeEventListener(){}}
+  ]});
+  return true;
+ })()
+ `;
+ assert.equal(await isolated(previewSetup),true);
+ await pause(1000);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"Synthetic English caption",
+  "Playing preview must not override the larger course video");
+ // If the course video becomes hidden, reject it and select only visible
+ // alternatives. Restore course player to prove correct handback.
+ await evaluate("document.querySelector('video').style.display='none'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Incorrect preview captions'"),
+  "visible preview chosen after course player disappears",5000);
+ await evaluate("document.querySelector('video').style.display='block'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),
+  "large course player reselected when it becomes visible",5000);
+ await isolated("document.getElementById('bgct-smoke-preview').remove();true");
+ console.log("BGCT MULTI-VIDEO PASS — larger lecture player wins over autoplay preview, hidden player rejected, visibility restoration handled.");
+
  // In a real browser, language changes must update the in-page controls without reloading.
  await evaluate("(()=>{const e=document.getElementById('bgct-candidate-ui');e.value='pt_BR';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
  await until(async()=>await evaluate("document.querySelector('label[for=\"bgct-candidate-ui\"]')?.textContent==='Idioma da interface'"),"PT-BR controls",6000);
