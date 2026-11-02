@@ -241,9 +241,9 @@ async function main(){
  await evaluate("document.querySelector('[data-purpose=captions-display]').hidden=false");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"visible DOM captions restored",5000);
  console.log("BGCT HIDDEN DOM CAPTION PASS — stale hidden subtitle suppressed and restored on visibility.");
- await evaluate("document.querySelector('[data-purpose=captions-display]').parentElement.style.display='none'");
+ await evaluate("(()=>{const node=document.querySelector('[data-purpose=captions-display]');const wrapper=document.createElement('div');wrapper.id='bgct-hidden-caption-wrapper';node.parentNode.insertBefore(wrapper,node);wrapper.appendChild(node);wrapper.style.display='none';return true})()");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"subtitle hidden by ancestor is suppressed",5000);
- await evaluate("document.querySelector('[data-purpose=captions-display]').parentElement.style.display=''");
+ await evaluate("document.getElementById('bgct-hidden-caption-wrapper').style.display=''");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"captions restore after ancestor is visible",5000);
  console.log("BGCT HIDDEN ANCESTOR CAPTION PASS — hidden wrappers do not leak stale subtitles.");
 
