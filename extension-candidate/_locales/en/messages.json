@@ -1,0 +1,111 @@
+{
+  "extensionName": {
+    "message": "BlackGold Course Translator",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "extensionDescription": {
+    "message": "Synchronized translation of captions and transcripts for supported online courses.",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusApiUnavailable": {
+    "message": "Translation API unavailable",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusPairUnavailable": {
+    "message": "Language pair not supported",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusDownloading": {
+    "message": "Downloading language model...",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusDownloadingProgress": {
+    "message": "Downloading $PERCENT$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    },
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusLoading": {
+    "message": "Loading...",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusTranslating": {
+    "message": "Translating...",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusError": {
+    "message": "Translation error",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusReady": {
+    "message": "Ready ✓",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusPreparing": {
+    "message": "Preparing...",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "actionCopyStatus": {
+    "message": "Copy status",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "actionOpenPanel": {
+    "message": "Open translator",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "actionClosePanel": {
+    "message": "Close panel",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "labelInterfaceLanguage": {
+    "message": "Interface language",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "labelSourceLanguage": {
+    "message": "Source language",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "labelTargetLanguage": {
+    "message": "Translation language",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "labelEcosystem": {
+    "message": "Ecosystem",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "errorNoCaptions": {
+    "message": "No captions or transcript available",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "errorUnsupportedPage": {
+    "message": "This course page is not supported",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "statusNeedsActivation": {
+    "message": "Click to start translation",
+    "description": "The local model can be started from a real user interaction; do not start downloads during passive page load."
+  },
+  "errorInvalidCue": {
+    "message": "Caption data could not be read.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorStaleTranslation": {
+    "message": "Translation interrupted. Try again.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorEmptyOutput": {
+    "message": "The browser returned no translated text. Try again.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorMissingContext": {
+    "message": "The current lesson could not be identified.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "errorModelNotReady": {
+    "message": "The translation model is not ready yet.",
+    "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  }
+}
