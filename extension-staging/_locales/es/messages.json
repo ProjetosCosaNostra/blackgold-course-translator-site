@@ -107,5 +107,9 @@
   "errorModelNotReady": {
     "message": "El modelo de traducción todavía no está listo.",
     "description": "Caption runtime error shown in the staging UI; integration into original extension is still pending."
+  },
+  "actionRetryTranslation": {
+    "message": "Reintentar traducción",
+    "description": "The user can retry the current caption after the browser model returns an error; no new model download."
   }
 }

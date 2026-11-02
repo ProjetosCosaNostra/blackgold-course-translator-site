@@ -1,6 +1,5 @@
 // Staging catalog generated from locale message resources; do not merge into the shipping extension without source review.
-(function(root){"use strict";
-root.BGCT_STAGING_CATALOGS=Object.freeze({
+(function(root){"use strict";root.BGCT_STAGING_CATALOGS=Object.freeze({
   "en": {
     "extensionName": "BlackGold Course Translator",
     "extensionDescription": "Synchronized translation of captions and transcripts for supported online courses.",
@@ -27,7 +26,8 @@ root.BGCT_STAGING_CATALOGS=Object.freeze({
     "errorStaleTranslation": "Translation interrupted. Try again.",
     "errorEmptyOutput": "The browser returned no translated text. Try again.",
     "errorMissingContext": "The current lesson could not be identified.",
-    "errorModelNotReady": "The translation model is not ready yet."
+    "errorModelNotReady": "The translation model is not ready yet.",
+    "actionRetryTranslation": "Retry translation"
   },
   "pt_BR": {
     "extensionName": "BlackGold Course Translator",
@@ -55,7 +55,8 @@ root.BGCT_STAGING_CATALOGS=Object.freeze({
     "errorStaleTranslation": "Tradução interrompida. Tente novamente.",
     "errorEmptyOutput": "O navegador não retornou o texto traduzido. Tente novamente.",
     "errorMissingContext": "Não foi possível identificar a aula atual.",
-    "errorModelNotReady": "O modelo de tradução ainda não está pronto."
+    "errorModelNotReady": "O modelo de tradução ainda não está pronto.",
+    "actionRetryTranslation": "Tentar tradução novamente"
   },
   "es": {
     "extensionName": "BlackGold Course Translator",
@@ -83,7 +84,8 @@ root.BGCT_STAGING_CATALOGS=Object.freeze({
     "errorStaleTranslation": "Traducción interrumpida. Inténtalo de nuevo.",
     "errorEmptyOutput": "El navegador no devolvió texto traducido. Inténtalo de nuevo.",
     "errorMissingContext": "No se pudo identificar la clase actual.",
-    "errorModelNotReady": "El modelo de traducción todavía no está listo."
+    "errorModelNotReady": "El modelo de traducción todavía no está listo.",
+    "actionRetryTranslation": "Reintentar traducción"
   }
 });
 })(globalThis);

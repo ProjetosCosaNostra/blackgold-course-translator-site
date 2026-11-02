@@ -15,3 +15,6 @@ Architecture:
 Important gates: No Chrome/Edge real-course validation, no proof of DOM selector stability, and no feature-parity comparison against the original. Do not upload to extension stores. Do not replace the original 0.6.0. Installation of this candidate has NOT been performed.
 
 Before release: retrieve full original source; compare requirements, behavior and approved visual baseline; test with authorized Udemy courses on Chrome/Edge desktop, full-screen and SPA lecture transitions; verify privacy and internationalization; obtain explicit release approval.
+
+## Retry recovery in candidate
+When the local model produces an error for a nonempty cue, the in-page button becomes a localized Retry translation control. It submits the same cue again without creating/downloading a second model. The real Chrome for Testing synthetic fixture checks empty output, translated error status, recovery and model reuse; no actual Udemy page or native translation model is tested.

@@ -219,10 +219,26 @@ async function main(){
  await isolated("globalThis.__BGCT_TEST_MOCK.requests[1].resolve('Segunda frase traduzida');true");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Segunda frase traduzida'"),"translated subtitle overlay");
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.created"),1);
+
+ // Deliberately provoke an empty result in the actual extension UI.
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Temporary translation failure'");
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>=3"),"third translation request");
+ await isolated("globalThis.__BGCT_TEST_MOCK.requests[2].resolve('   ');true");
+ await until(async()=>await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').textContent==='Retry translation'"),"localized retry button");
+ assert.equal(await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').disabled"),false);
+ assert.equal(await evaluate("document.querySelector('#bgct-candidate-panel .bgct-state').textContent"),"The browser returned no translated text. Try again.");
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true);
+ await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').click()",true);
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>=4"),"retry of exact same caption");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.created"),1,"Retry reuses the loaded browser model");
+ await isolated("globalThis.__BGCT_TEST_MOCK.requests[3].resolve('Tradução recuperada');true");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Tradução recuperada'"),"recovered translation on same cue");
+ console.log("BGCT REAL BROWSER RETRY PASS — blank model result, localized error, manual retry, same model and recovered overlay.");
+
  console.log("BGCT REAL BROWSER TRANSLATION CONTRACT PASS — MV3 isolated world, simulated Translator, direct activation, cue cancellation, translated overlay.");
  // Restore original-language mode for SPA/fullscreen and route-cleanup checks.
  await evaluate("(()=>{const e=document.getElementById('bgct-candidate-target');e.value='en';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
- await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Fast second sentence'"),"return to same-language passthrough");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Temporary translation failure'"),"return to same-language passthrough");
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.destroyed"),1,"Changing language pair must destroy the old session");
 
  // SPA lecture navigation with same video must not continue showing the old caption.

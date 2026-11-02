@@ -54,11 +54,15 @@
   langLabel.textContent=msg("labelInterfaceLanguage");
   from.label.textContent=msg("labelSourceLanguage");to.label.textContent=msg("labelTargetLanguage");
   ecosystem.textContent=msg("labelEcosystem");clear.textContent=msg("actionClosePanel");
-  start.textContent=msg("statusNeedsActivation");
+  const sessionState=session.snapshot();
+  const canRetry=sessionState.ready&&frame?.state==="error";
+  start.textContent=msg(canRetry?"actionRetryTranslation":"statusNeedsActivation");
   status.textContent=frame?.state==="error"?
    localeApi.captionError(frame.reason,locale):localeApi.status(state,detail.progress,locale);
   if(!video)status.textContent=msg("errorNoCaptions");
-  start.disabled=state==="downloading"||state==="loading"||state==="ready"||state==="translating";
+  // Activation is permitted only after availability() completes.
+  // A loaded model can instead retry the last failed caption without redownloading.
+  start.disabled=!(canRetry||(state==="needs-activation"&&!sessionState.originalMode));
   note.textContent=locale==="pt_BR"?"Integração com o manifesto oficial do Ecossistema pendente. Nenhum redirecionamento automático.":locale==="es"?"Integración pendiente del manifiesto oficial del Ecosistema. Sin redirección automática.":"Official Ecosystem manifest integration pending. No automatic redirects.";
   hide.setAttribute("aria-label",msg("actionClosePanel"));
  }
@@ -73,6 +77,12 @@
  from.select.addEventListener("change",()=>{source=from.select.value;changedSettings()});
  to.select.addEventListener("change",()=>{target=to.select.value;changedSettings()});
  start.addEventListener("click",()=>{
+  const current=session.snapshot();
+  if(current.ready&&frame?.state==="error"){
+   lastCue=null;sync(); // The caption coordinator has already cleared a failed request.
+   return;
+  }
+  if(state!=="needs-activation"||current.originalMode)return;
   // Deliberately synchronous: never await before the real gesture-based create().
   const p=session.activateFromGesture();
   void p.then(result=>{if(result?.ok)lastCue=null;sync();refresh()}).catch(()=>refresh());
