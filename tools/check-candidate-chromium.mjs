@@ -180,6 +180,8 @@ async function main(){
   if(result.exceptionDetails)throw Error("Extension world JS error: "+JSON.stringify(result.exceptionDetails).slice(0,700));
   return result.result?.value;
  }
+ const nativeProbe=await isolated("({type:typeof globalThis.Translator,availability:typeof globalThis.Translator?.availability,create:typeof globalThis.Translator?.create})");
+ console.log("BGCT NATIVE API PASSIVE PROBE (no model download): "+JSON.stringify(nativeProbe));
  const mockScript=String.raw`
  (()=>{
   const mock={availability:[],created:0,destroyed:0,requests:[]};
@@ -253,6 +255,45 @@ async function main(){
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"reentered course",10000);
  console.log("BGCT REAL CHROMIUM MV3 SMOKE PASS — installed unpacked in disposable profile, HTTPS synthetic lesson, scoped injection, DOM captions, same-language passthrough, PT-BR/EN/ES controls, fullscreen where available, lecture SPA, route cleanup.");
  console.log("SCOPE: Synthetic browser fixture only. NOT a real Udemy course or original 0.6.0 extension.");
+
+ // Test the actual extension popup page in Chrome rather than relying only on JS syntax checks.
+ const extensionId=await isolated("chrome.runtime.id");
+ assert.match(extensionId,/^[a-p]{32}$/,"MV3 extension ID must be available in isolated content world");
+ const popupURL="chrome-extension://"+extensionId+"/popup.html";
+ const pageResponse=await fetch("http://127.0.0.1:"+debugPort+"/json/new?"+encodeURIComponent(popupURL),{method:"PUT"});
+ assert.equal(pageResponse.status,200,"Opening the packaged popup should succeed");
+ const popupTab=await pageResponse.json();
+ const popupCDP=openCDP(popupTab.webSocketDebuggerUrl);
+ await popupCDP.ready;
+ launched.push(()=>popupCDP.close());
+ await popupCDP.call("Page.enable");
+ await popupCDP.call("Runtime.enable");
+ async function popupEval(expression){
+  const result=await popupCDP.call("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true});
+  if(result.exceptionDetails)throw Error("Popup JS error: "+JSON.stringify(result.exceptionDetails).slice(0,800));
+  return result.result?.value;
+ }
+ await until(async()=>await popupEval("document.getElementById('open')?.textContent?.length>0"),"actual popup startup",8000);
+ assert.equal(await popupEval("location.protocol"),"chrome-extension:","Popup must run as a real extension page");
+ assert.equal(await popupEval("document.querySelector('header strong').textContent"),"BlackGold Course Translator");
+ assert.equal(await popupEval("document.getElementById('ui-label').textContent"),"Interface language");
+ await popupEval("(()=>{const e=document.getElementById('ui');e.value='es';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await popupEval("document.getElementById('ui-label').textContent==='Idioma de la interfaz'"),"Spanish popup controls",6000);
+ await until(async()=>await popupEval("(async()=>{const v=await chrome.storage.local.get('bgctUiLocale');return v.bgctUiLocale==='es'})()"),"stored Spanish interface locale",6000);
+ await popupEval("(()=>{const e=document.getElementById('ui');e.value='pt_BR';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await popupEval("document.getElementById('ui-label').textContent==='Idioma da interface'"),"Brazilian Portuguese popup controls",6000);
+ await popupEval("(()=>{const e=document.getElementById('ui');e.value='en';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await popupEval("document.getElementById('ui-label').textContent==='Interface language'"),"English popup controls",6000);
+ // Verify popup->content messaging using the real MV3 runtime. Find the fixture lesson tab
+ // by its responding content script; no URL/title access or broad tabs permission required.
+ const lessonTabId=await popupEval("(async()=>{for(const t of await chrome.tabs.query({})){try{const x=await chrome.tabs.sendMessage(t.id,{channel:'bgct-candidate',type:'status'});if(x?.candidate)return t.id}catch{}}return null})()");
+ assert.ok(Number.isInteger(lessonTabId)&&lessonTabId>0,"Popup must locate the installed candidate's tab");
+ await evaluate("document.getElementById('bgct-candidate-panel').hidden=true");
+ const openResult=await popupEval("chrome.tabs.sendMessage("+lessonTabId+",{channel:'bgct-candidate',type:'open'})");
+ assert.equal(openResult?.ok,true,"Popup-to-content message must reopen the panel");
+ await until(async()=>await evaluate("!document.getElementById('bgct-candidate-panel').hidden"),"panel reopened by popup runtime message",6000);
+ console.log("BGCT REAL CHROME POPUP PASS — actual extension page, PT-BR/EN/ES labels, chrome.storage persistence, tab messaging and panel reopening.");
+
 }
 try{await main()}catch(e){
  console.error("BGCT CHROMIUM SMOKE FAILED:",e?.stack||String(e));
