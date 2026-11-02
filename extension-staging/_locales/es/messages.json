@@ -1,0 +1,87 @@
+{
+  "extensionName": {
+    "message": "BlackGold Course Translator",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "extensionDescription": {
+    "message": "Traducción sincronizada de subtítulos y transcripciones de cursos en línea compatibles.",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusApiUnavailable": {
+    "message": "API de traducción no disponible",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusPairUnavailable": {
+    "message": "Par de idiomas no compatible",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusDownloading": {
+    "message": "Descargando modelo de idioma...",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusDownloadingProgress": {
+    "message": "Descargando $PERCENT$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    },
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusLoading": {
+    "message": "Cargando...",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusTranslating": {
+    "message": "Traduciendo...",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusError": {
+    "message": "Error de traducción",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusReady": {
+    "message": "Listo ✓",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "statusPreparing": {
+    "message": "Preparando...",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "actionCopyStatus": {
+    "message": "Copiar estado",
+    "description": "Translation UI/status or manifest string; verify against full extension source before integration."
+  },
+  "actionOpenPanel": {
+    "message": "Abrir traductor",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "actionClosePanel": {
+    "message": "Cerrar panel",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "labelInterfaceLanguage": {
+    "message": "Idioma de la interfaz",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "labelSourceLanguage": {
+    "message": "Idioma de origen",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "labelTargetLanguage": {
+    "message": "Idioma de traducción",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "labelEcosystem": {
+    "message": "Ecosistema",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "errorNoCaptions": {
+    "message": "No hay subtítulos ni transcripción disponibles",
+    "description": "Proposed UI string; verify product scope before integration."
+  },
+  "errorUnsupportedPage": {
+    "message": "Esta página del curso no es compatible",
+    "description": "Proposed UI string; verify product scope before integration."
+  }
+}
