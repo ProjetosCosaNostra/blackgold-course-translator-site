@@ -75,3 +75,8 @@ Full original extension source, real Chrome/Edge tests, actual Udemy caption int
 - `locale-core.js` fornece `captionError(reason, locale)`, com fallback seguro para erro genérico quando o código não é conhecido. `catalogs.js` acompanha as mesmas strings para permitir escolha manual de idioma da interface.
 - Testes cobrem os códigos nos três idiomas e fallback. Não foi alterada a preferência do idioma-alvo da tradução; a internacionalização é da UI.
 - Integração na interface real da extensão ainda depende de recuperar a fonte original. Não confundir sucesso do staging com um novo release.
+
+
+## 02 Nov 2026 — staging session controller
+- Added session-controller.js connecting model availability, explicit model activation, caption lifecycle, lecture transitions, language resets and private session cleanup. It does not call Translator.create during passive page load.
+- Added check-session-controller.mjs with mocked on-device translation and event sequencing. Not integrated with the original 0.6.0 extension; no Udemy DOM testing, release, or deployment.
