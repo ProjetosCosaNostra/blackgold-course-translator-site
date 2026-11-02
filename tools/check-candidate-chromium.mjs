@@ -232,6 +232,13 @@ async function main(){
  await isolated("(()=>{const v=document.querySelector('video');delete v.textTracks;return true})()");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"DOM fallback resumes after tracks removed",5000);
  console.log("BGCT TRACK LANGUAGE PASS — matching en-US captions prioritized, mismatched pt-BR suppressed, DOM fallback restored.");
+ // A hidden DOM caption may retain text from an earlier cue. It must not render.
+ await evaluate("document.querySelector('[data-purpose=captions-display]').hidden=true");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"hidden DOM caption suppressed",5000);
+ await evaluate("document.querySelector('[data-purpose=captions-display]').hidden=false");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"visible DOM captions restored",5000);
+ console.log("BGCT HIDDEN DOM CAPTION PASS — stale hidden subtitle suppressed and restored on visibility.");
+
  // The course player is the large visible video. A small autoplaying promo
  // must not hijack the subtitle coordinator, even when it has active cues.
  const previewSetup=String.raw`
