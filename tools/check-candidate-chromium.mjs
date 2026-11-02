@@ -274,6 +274,20 @@ async function main(){
  await evaluate("(()=>{document.getElementById('bgct-replacement-player').remove();document.querySelector('#player-wrapper video').style.display='block';document.querySelector('[data-purpose=\\\"captions-display\\\"]').textContent='Synthetic English caption';return true})()");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"original player restored after replacement",5000);
  console.log("BGCT REPLACEMENT VIDEO CAPTION PASS — stale DOM cue blocked; new caption accepted.");
+ // A player may be removed before its replacement is mounted. Keep its
+ // previous cue quarantined across the interval without any visible video.
+ await evaluate("document.querySelector('#player-wrapper video').style.display='none'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"old player removed",5000);
+ await pause(950);
+ await evaluate("(()=>{const v=document.createElement('video');v.id='bgct-gap-player';v.style.cssText='display:block;width:710px;height:400px';document.getElementById('player-wrapper').appendChild(v);return true})()");
+ await pause(950);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Inherited DOM caption must remain blocked after player-free gap");
+ await evaluate("document.querySelector('[data-purpose=captions-display]').textContent='New caption after player gap'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='New caption after player gap'"),"first real cue after player gap",5000);
+ await evaluate("(()=>{document.getElementById('bgct-gap-player').remove();document.querySelector('#player-wrapper video').style.display='block';document.querySelector('[data-purpose=captions-display]').textContent='Synthetic English caption';return true})()");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"original video restored after gap",5000);
+ console.log("BGCT VIDEO-GAP QUARANTINE PASS — inherited cue blocked across an interval without a video.");
+
 
 
 
