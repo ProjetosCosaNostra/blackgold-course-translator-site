@@ -1,0 +1,38 @@
+name: BGCT candidate MV3 static audit (no deploy)
+on:
+  push:
+    branches:
+      - work/bgct-restart-zero-budget-i18n-20261102
+    paths:
+      - 'extension-candidate/**'
+      - 'extension-staging/**'
+      - 'tools/check-extension-candidate.mjs'
+      - '.github/workflows/candidate-static-check.yml'
+  pull_request:
+    paths:
+      - 'extension-candidate/**'
+      - 'extension-staging/**'
+      - 'tools/check-extension-candidate.mjs'
+      - '.github/workflows/candidate-static-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit candidate and module contracts
+        run: |
+          node tools/check-extension-candidate.mjs
+          node tools/check-extension-i18n.mjs
+          node tools/check-translator-api.mjs
+          node tools/check-caption-coordinator.mjs
+          node tools/check-session-controller.mjs
+          node tools/check-staging-integration.mjs

@@ -69,7 +69,7 @@
  start.addEventListener("click",()=>{
   // Deliberately synchronous: never await before the real gesture-based create().
   const p=session.activateFromGesture();
-  void p.then(()=>{sync();refresh()}).catch(()=>refresh());
+  void p.then(result=>{if(result?.ok)lastCue=null;sync();refresh()}).catch(()=>refresh());
  });
  hide.addEventListener("click",()=>{panel.hidden=true});
  clear.addEventListener("click",()=>{panel.hidden=true;cancelCaption()});
