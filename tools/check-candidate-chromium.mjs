@@ -297,6 +297,26 @@ async function main(){
    console.log("BGCT NATIVE TRANSLATION NOT TESTED — model not installed or API unavailable; no download attempted.");
   }
  }
+ // Passive matrix for the three supported product languages. This probes capabilities
+ // without creating a model, downloading language packs, or altering a user profile.
+ if(nativeProbe.availability==="function"){
+  const matrix=await isolated(`(async()=>{
+   const pairs=[['en','es'],['es','pt'],['pt','en']];
+   const statuses=[];
+   for(const [sourceLanguage,targetLanguage] of pairs){
+    try{
+     const status=await globalThis.Translator.availability({sourceLanguage,targetLanguage});
+     statuses.push({pair:sourceLanguage+'->'+targetLanguage,status});
+    }catch(error){
+     statuses.push({pair:sourceLanguage+'->'+targetLanguage,status:'error:'+String(error?.name||'unknown')});
+    }
+   }
+   return statuses;
+  })()`);
+  assert.equal(matrix.length,3,"Native tri-language availability matrix must contain three pairs");
+  for(const entry of matrix)assert.equal(typeof entry.status,"string");
+  console.log("BGCT NATIVE PT/EN/ES AVAILABILITY MATRIX (no create/download): "+JSON.stringify(matrix));
+ }
  const mockScript=String.raw`
  (()=>{
   const mock={availability:[],created:0,destroyed:0,requests:[],setupAttempts:0,failSetupOnce:true};
