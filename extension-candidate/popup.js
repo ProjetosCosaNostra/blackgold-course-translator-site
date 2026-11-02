@@ -32,5 +32,6 @@ document.getElementById("open").addEventListener("click",async()=>{
   target.value=["en","pt","es"].includes(d.bgctCandidateTargetLanguage)?d.bgctCandidateTargetLanguage:"pt";
  }catch{locale=i18n.resolve(null,navigator.languages||[navigator.language]);ui.value=locale}
  refresh();
+ document.documentElement.dataset.bgctPopupReady="true";
 })();
 })();
