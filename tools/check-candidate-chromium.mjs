@@ -354,6 +354,19 @@ async function main(){
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Temporary translation failure'"),"return to same-language passthrough");
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.destroyed"),1,"Changing language pair must destroy the old session");
 
+
+ // A single <video> reused for different media must not leak the previous
+ // caption, even if the course/lecture URL remains identical.
+ await isolated("(()=>{const v=document.querySelector('video');Object.defineProperty(v,'currentSrc',{configurable:true,value:'https://video.invalid/new-lesson.m3u8'});v.dispatchEvent(new Event('loadstart'));return true})()");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"source change hides inherited caption",4000);
+ await pause(950);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Old source cue stays blocked");
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='New media subtitle'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='New media subtitle'"),"new media subtitle on same video",5000);
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Temporary translation failure'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Temporary translation failure'"),"restored caption after source change",5000);
+ console.log("BGCT SAME-VIDEO NEW-MEDIA PASS — changing currentSrc quarantines previous cue and accepts the new caption.");
+
  // A SPA transition can update the lecture URL before updating the player's
  // caption DOM. The caption from lecture 1 must never be assigned to lecture 2.
  await evaluate("(()=>{history.pushState({},'','/course/local-fixture/learn/lecture-2');document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Synthetic lesson two';return true})()");

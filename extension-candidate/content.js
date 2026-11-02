@@ -12,7 +12,7 @@
  const localeApi=globalThis.BGCT_STAGING_LOCALE;
  const factory=globalThis.BGCT_STAGING_SESSION;
  if(!localeApi||!factory||!document.body)return;
- let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,inactive=false,lastCue=null,blockedPreviousCue=null,blockedCaptionVersion=null,captionEventVersion=0,routeHidden=false;
+ let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,inactive=false,lastCue=null,lastMeaningfulCue=null,mediaBoundaryCue=null,mediaSource=null,mediaRevision=0,blockedPreviousCue=null,blockedCaptionVersion=null,captionEventVersion=0,routeHidden=false;
  let observedVideo=null,observedTracks=[],observedCaption=null,captionObserver=null,endedVideo=null;
  const captionSelector='[data-purpose="captions-display"],[data-purpose="captions-container"],[class*="captions-display--captions-container"]';
  const tags={en:"English",pt:"Português",es:"Español"};
@@ -94,7 +94,7 @@
   if(closed||inactive)return;
   inactive=true;
   panel.hidden=true;
-  lastLesson=null;lastCue=null;blockedPreviousCue=null;blockedCaptionVersion=null;
+  lastLesson=null;lastCue=null;lastMeaningfulCue=null;mediaBoundaryCue=null;blockedPreviousCue=null;blockedCaptionVersion=null;
   stopWatchingVideo();stopWatchingCaptions();
   // Fail closed: release the model and all private course/caption caches.
   session.setLesson(null);
@@ -116,8 +116,20 @@
  function onSeekStart(){lastCue=null;cancelCaption()}
  function onMediaEnd(){endedVideo=video;lastCue=null;cancelCaption()}
  function onMediaResume(){endedVideo=null;lastCue=null;sync()}
+ function readMediaSource(element){
+  if(!element)return "";
+  // URL is used only for in-memory equality; do not log, cache or persist it.
+  return element.currentSrc||element.getAttribute("src")||
+   element.querySelector("source[src]")?.src||"";
+ }
+ function mediaSourceChanged(){
+  mediaBoundaryCue=lastMeaningfulCue||lastCue;
+  mediaRevision++;
+ }
+ function onMediaLoadStart(){if(!closed&&!inactive)sync()}
  function stopWatchingVideo(){
   if(observedVideo){
+   observedVideo.removeEventListener("loadstart",onMediaLoadStart);
    observedVideo.removeEventListener("seeking",onSeekStart);
    observedVideo.removeEventListener("seeked",onMediaResume);
    observedVideo.removeEventListener("play",onMediaResume);
@@ -132,6 +144,7 @@
    stopWatchingVideo();
    observedVideo=current;
    if(current){
+    current.addEventListener("loadstart",onMediaLoadStart);
     current.addEventListener("seeking",onSeekStart);
     current.addEventListener("seeked",onMediaResume);
     current.addEventListener("play",onMediaResume);
@@ -194,7 +207,7 @@
   const explicitId=["lectureId","lecture_id","lecture","itemId","item_id"]
    .map(key=>u.searchParams.get(key)).find(value=>value&&value.trim());
   const suffix=u.pathname.split("/learn/")[1]||"";
-  const lecture=u.pathname+(explicitId?"|"+explicitId:(!suffix?"|"+title.slice(0,150):""));
+  const lecture=u.pathname+(explicitId?"|"+explicitId:(!suffix?"|"+title.slice(0,150):""))+"|media-revision:"+mediaRevision;
   return {courseId:course[1],lectureId:lecture,sourceLanguage:source,targetLanguage:target};
  }
  function cueFromTrack(element){
@@ -237,7 +250,8 @@
    // loaded model and cached transcripts. Do it only once per departure.
    if(lastLesson!==null){lastLesson=null;void session.setLesson(null)}
    panel.hidden=true;routeHidden=true;caption.textContent="";caption.hidden=true;
-   lastCue=null;blockedPreviousCue=null;blockedCaptionVersion=null;video=null;
+   lastCue=null;lastMeaningfulCue=null;mediaBoundaryCue=null;mediaSource=null;mediaRevision=0;
+   blockedPreviousCue=null;blockedCaptionVersion=null;video=null;
    stopWatchingVideo();stopWatchingCaptions();refresh();return;
   }
   if(routeHidden){
@@ -248,8 +262,12 @@
   if(!panel.isConnected||!caption.isConnected)reposition();
   const current=getVideo();
   if(current!==video){
-   video=current;lastCue=null;lastLesson=null;
+   video=current;lastCue=null;lastMeaningfulCue=null;mediaBoundaryCue=null;
+   mediaSource=readMediaSource(video);mediaRevision=0;lastLesson=null;
    blockedPreviousCue=null;blockedCaptionVersion=null;cancelCaption();
+  }else if(video){
+   const nextSource=readMediaSource(video);
+   if(nextSource!==mediaSource){mediaSource=nextSource;mediaSourceChanged()}
   }
   watchVideo(video);
   watchCaptionNode();
@@ -261,8 +279,10 @@
    // The player and DOM can still contain the previous lecture's captions
    // while a single-page navigation switches the lecture URL.
    // Quarantine exactly that last source cue until the caption source changes.
-   blockedPreviousCue=lastLesson!==null?lastCue:null;
+   blockedPreviousCue=mediaBoundaryCue!==null?mediaBoundaryCue:
+    lastLesson!==null?lastCue:null;
    blockedCaptionVersion=blockedPreviousCue!==null?captionEventVersion:null;
+   mediaBoundaryCue=null;lastMeaningfulCue=null;
    lastLesson=key;lastCue=null;
    void session.setLesson(lesson).then(()=>refresh()).catch(()=>refresh());
   }
@@ -283,7 +303,11 @@
    // been rendered, so force the same text through the new lesson's coordinator.
    lastCue=null;
   }
-  if(cueKey!==lastCue){lastCue=cueKey;void session.showCue(cue).catch(()=>{})}
+  if(cueKey!==lastCue){
+   lastCue=cueKey;
+   if(typeof cue.text==="string"&&cue.text.trim())lastMeaningfulCue=cueKey;
+   void session.showCue(cue).catch(()=>{});
+  }
   refresh();
  }
  try{chrome.runtime.onMessage.addListener((message,_sender,respond)=>{
