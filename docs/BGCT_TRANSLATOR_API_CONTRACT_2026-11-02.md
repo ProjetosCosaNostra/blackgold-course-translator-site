@@ -29,3 +29,11 @@ Full original extension source, real Chrome/Edge tests, actual Udemy caption int
 - Progresso de download atrasado não regride a interface de `ready` para `downloading`; eventos sem valor numérico não são convertidos indevidamente em 0%.
 - Testes simulados em `tools/check-translator-api.mjs` cobrem conclusão fora de ordem, erro obsoleto, legenda vazia, troca de idioma e progresso atrasado.
 - Este módulo permanece isolado. Ainda falta integração no `content.js` original e teste com aula real.
+
+## 2026-11-02 — cancelamento de tradução obsoleta e coordenador de legendas
+- Documentação oficial: Chrome processa traduções sequencialmente; não basta apenas rejeitar o resultado antigo. O módulo de tradução preparado agora repassa um AbortSignal a translate() quando disponível e cancela o segmento anterior ao receber um novo segmento. O fallback por sequence ID permanece para APIs que não respeitam AbortSignal. Fonte: https://developer.chrome.com/docs/ai/translator-api
+- Edge documenta AbortController para interromper traduções e sessões. O progresso do modelo aceita event.loaded/event.total ou event.loaded (fração). Fonte: https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api
+- Um novo caption-coordinator.js guarda em memória (nunca envia ao servidor) um cache LRU limitado de traduções por curso, aula, idiomas, cue ID, timestamp e texto. Deduplica requisições idênticas, evita exibir o texto original enquanto traduz, suprime respostas atrasadas, limpa a legenda ao mudar de aula e sinaliza falhas sem deixar o texto vazio silenciosamente.
+- A mudança de aula com o mesmo par de idiomas preserva a sessão local já carregada; a troca de par de idiomas precisa resetar a sessão.
+- Ferramentas de QA: check-translator-api.mjs e check-caption-coordinator.mjs, executadas no GitHub Actions (simulações, não navegador real).
+- **Sem integração com a extensão instalada**: só módulos preparados; não afirmar que a sincronização de Udemy foi consertada. É necessário revisar selectors e contrato de cue reais no content.js original.

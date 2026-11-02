@@ -4,7 +4,7 @@ import path from "node:path";
 import vm from "node:vm";
 const file=path.join(import.meta.dirname,"../extension-staging/translator-api-adapter.js");
 const code=fs.readFileSync(file,"utf8");
-const sandbox={};vm.createContext(sandbox);vm.runInContext(code,sandbox);
+const sandbox={AbortController};vm.createContext(sandbox);vm.runInContext(code,sandbox);
 const make=sandbox.BGCT_STAGING_TRANSLATOR.makeRuntime;
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 function sampleCtor(availability="available",extra={}){
@@ -152,4 +152,50 @@ finishFirstInspect("downloadable");
 assert.equal((await earlierInspection).code,"stale","An older capability check must not replace latest language pair");
 assert.equal(inspected.snapshot().pending,true);
 
-console.log("BGCT Translator API ADAPTER PASS — availability gates, user gesture, progress, no auto download, same-lesson caption races, stale session/translation, late progress, cleanup and error states.");
+
+const cancelEvents=[];
+const abortable=make({TranslatorCtor:{
+ availability:async()=>"available",
+ create:()=>Promise.resolve({
+  translate(text,{signal}={}){
+   return new Promise((resolve,reject)=>{
+    cancelEvents.push({text,resolve,reject,signal});
+    signal?.addEventListener("abort",()=>reject(new Error("aborted")),{once:true});
+   });
+  },
+  destroy(){}
+ })
+}});
+await abortable.inspect("en","pt");
+await abortable.startFromGesture();
+const firstJob=abortable.translate("first");
+const secondJob=abortable.translate("second");
+assert.equal(cancelEvents.length,2);
+assert.equal(cancelEvents[0].signal.aborted,true,"Superseded caption should abort");
+assert.equal((await firstJob).code,"stale","Aborted obsolete cue returns stale, not error");
+cancelEvents[1].resolve("SEGUNDO");
+assert.equal((await secondJob).text,"SEGUNDO");
+assert.equal(abortable.snapshot().state,"ready");
+const thirdJob=abortable.translate("third");
+abortable.cancelPending();
+assert.equal(cancelEvents[2].signal.aborted,true,"Cancel pending should abort current translate");
+assert.equal((await thirdJob).code,"stale");
+assert.equal(abortable.snapshot().ready,true,"Cancel pending preserves loaded model");
+assert.equal(abortable.snapshot().state,"ready");
+const fourthJob=abortable.translate("fourth");
+abortable.reset();
+assert.equal(cancelEvents[3].signal.aborted,true,"Reset should abort translation");
+assert.equal((await fourthJob).code,"stale");
+assert.equal(abortable.snapshot().ready,false);
+const noController=make({TranslatorCtor:sampleCtor("available").T,AbortControllerCtor:null});
+await noController.inspect("en","es");await noController.startFromGesture();
+assert.equal((await noController.translate("hello")).text,"HELLO","Fallback works if AbortController absent");
+const edgeProgress=sampleCtor("downloadable"),edgeValues=[];
+const edgeRuntime=make({TranslatorCtor:edgeProgress.T,onProgress:p=>edgeValues.push(p)});
+await edgeRuntime.inspect("en","es");
+const edgeStart=edgeRuntime.startFromGesture();
+edgeProgress.events.downloadprogress({loaded:20,total:100});
+assert.equal(edgeValues[0],20,"Progress supports Edge loaded/total counters");
+await edgeStart;
+
+console.log("BGCT Translator API ADAPTER PASS — availability gates, user gesture, progress, no auto download, same-lesson caption races, AbortSignal cancellation, Chrome/Edge progress, stale results, cleanup and error states.");

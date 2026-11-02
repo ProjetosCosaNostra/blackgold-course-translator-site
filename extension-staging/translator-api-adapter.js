@@ -8,14 +8,19 @@ function makeRuntime(config={}){
  const getCtor=()=>Object.prototype.hasOwnProperty.call(config,"TranslatorCtor")?config.TranslatorCtor:root.Translator;
  const onState=typeof config.onState==="function"?config.onState:()=>{};
  const onProgress=typeof config.onProgress==="function"?config.onProgress:()=>{};
- let generation=0,translationRevision=0,pending=null,active=null,currentState="idle";
+ let generation=0,translationRevision=0,pending=null,active=null,activeAbort=null,currentState="idle";
  function inform(state,detail={}){
   if(!states.has(state))throw new Error("Unsupported translator state: "+state);
   currentState=state;
   try{onState(state,detail)}catch{/* UI observers must never crash translation */}
  }
  function destroyActive(){const x=active;active=null;if(x&&typeof x.destroy==="function"){try{x.destroy()}catch{/* cleanup best effort */}}}
- function invalidate(){generation++;translationRevision++;pending=null;destroyActive();return generation}
+ function stopTranslation(){
+  const controller=activeAbort;activeAbort=null;
+  if(controller&&typeof controller.abort==="function"){try{controller.abort()}catch{/* already stopped */}}
+ }
+ function invalidate(){generation++;translationRevision++;stopTranslation();pending=null;destroyActive();return generation}
+ function cancelPending(){translationRevision++;stopTranslation();if(active)inform("ready")}
  function reset(){invalidate();inform("idle")}
  function supported(){
   const T=getCtor();
@@ -66,7 +71,9 @@ function makeRuntime(config={}){
       if(token!==generation||!downloadOpen)return;
       const value=event?.loaded;
       if(typeof value!=="number"||!Number.isFinite(value))return;
-      const percent=Math.max(0,Math.min(100,Math.round(value*100)));
+      const total=event?.total;
+      const ratio=typeof total==="number"&&Number.isFinite(total)&&total>0?value/total:value;
+      const percent=Math.max(0,Math.min(100,Math.round(ratio*100)));
       inform("downloading",{progress:percent});
       try{onProgress(percent)}catch{/* ignore UI callback errors */}
      });
@@ -91,16 +98,34 @@ function makeRuntime(config={}){
   return {ok:true,code:"ready"};
  }
  async function translate(text){
-  // Every incoming caption supersedes the previous one, even in the same lesson.
-  const revision=++translationRevision;
   const translator=active,token=generation;
   if(!translator)return {ok:false,code:"not-ready"};
   if(typeof text!=="string")return {ok:false,code:"invalid-text"};
+  // A newer cue cancels queued work in browsers that implement AbortSignal.
+  // The sequence guard remains mandatory when a browser ignores cancellation.
+  const revision=++translationRevision;
+  stopTranslation();
   if(!text.trim()){inform("ready");return {ok:true,code:"empty",text:""}}
   inform("translating");
+  const Controller=Object.prototype.hasOwnProperty.call(config,"AbortControllerCtor")
+   ?config.AbortControllerCtor:root.AbortController;
+  let controller=null;
+  if(typeof Controller==="function"){
+   try{controller=new Controller()}catch{/* fall back to sequence guard */}
+  }
+  activeAbort=controller;
   let result;
-  try{result=await translator.translate(text)}
-  catch{if(token!==generation||revision!==translationRevision||translator!==active)return {ok:false,code:"stale"};inform("error",{reason:"translate-failed"});return {ok:false,code:"translate-failed"}}
+  try{
+   result=await (controller
+    ?translator.translate(text,{signal:controller.signal})
+    :translator.translate(text));
+  }catch{
+   if(token!==generation||revision!==translationRevision||translator!==active)return {ok:false,code:"stale"};
+   inform("error",{reason:"translate-failed"});
+   return {ok:false,code:"translate-failed"};
+  }finally{
+   if(activeAbort===controller)activeAbort=null;
+  }
   if(token!==generation||revision!==translationRevision||translator!==active)return {ok:false,code:"stale"};
   if(typeof result!=="string"){
    inform("error",{reason:"non-text-result"});
@@ -110,7 +135,7 @@ function makeRuntime(config={}){
   return {ok:true,code:"translated",text:result};
  }
  function snapshot(){return Object.freeze({state:currentState,generation,ready:Boolean(active),pending:Boolean(pending)})}
- return Object.freeze({supported,inspect,startFromGesture,translate,reset,snapshot});
+ return Object.freeze({supported,inspect,startFromGesture,translate,cancelPending,reset,snapshot});
 }
 root.BGCT_STAGING_TRANSLATOR=Object.freeze({makeRuntime});
 if(typeof module!=="undefined"&&module.exports)module.exports=root.BGCT_STAGING_TRANSLATOR;
