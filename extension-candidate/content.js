@@ -1,8 +1,14 @@
 // BGCT 0.6.1 INTERNAL CANDIDATE: does not replace the 0.6.0 extension.
 (function(){"use strict";
  const namespace="bgct-candidate";
- const allowed=/^https:\/\/([a-z0-9-]+\.)*udemy\.com\/course\/[^/]+\/learn\//i;
- if(!allowed.test(location.href)||document.getElementById(namespace+"-panel"))return;
+ function isAllowedPage(){
+  try{
+   const u=new URL(location.href);
+   return u.protocol==="https:"&&/(^|\.)udemy\.com$/i.test(u.hostname)&&
+     /^\/course\/[^/]+\/learn\//i.test(u.pathname);
+  }catch{return false}
+ }
+ if(!isAllowedPage()||document.getElementById(namespace+"-panel"))return;
  const localeApi=globalThis.BGCT_STAGING_LOCALE;
  const factory=globalThis.BGCT_STAGING_SESSION;
  if(!localeApi||!factory||!document.body)return;
@@ -111,7 +117,7 @@
  }
  function sync(){
   if(closed)return;
-  if(!allowed.test(location.href)){
+  if(!isAllowedPage()){
    // On SPA navigation outside the approved lesson path, erase the old course,
    // loaded model and cached transcripts. Do it only once per departure.
    if(lastLesson!==null){lastLesson=null;void session.setLesson(null)}

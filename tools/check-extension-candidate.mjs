@@ -34,6 +34,7 @@ assert.ok(script.includes("textTracks"));
 assert.ok(script.includes("data-purpose"));
 assert.ok(script.includes("fullscreenchange"));
 assert.ok(script.includes("session.setLesson(null)"),"Unsupported SPA route must release course data");
+assert.ok(script.includes("isAllowedPage()"),"Route validation is URL-based rather than brittle string matching");
 assert.ok(script.includes("chrome.runtime.onMessage.addListener"));
 assert.ok(script.includes("caption.textContent=info.text"),"Caption must be safely rendered as text");
 assert.ok(read("popup.html").includes('id="open"'));
