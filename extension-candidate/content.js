@@ -12,7 +12,7 @@
  const localeApi=globalThis.BGCT_STAGING_LOCALE;
  const factory=globalThis.BGCT_STAGING_SESSION;
  if(!localeApi||!factory||!document.body)return;
- let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,inactive=false,lastCue=null;
+ let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,inactive=false,lastCue=null,blockedPreviousCue=null;
  let observedVideo=null,observedTracks=[],observedCaption=null,captionObserver=null,endedVideo=null;
  const captionSelector='[data-purpose="captions-display"],[data-purpose="captions-container"],[class*="captions-display--captions-container"]';
  const tags={en:"English",pt:"Português",es:"Español"};
@@ -94,7 +94,7 @@
   if(closed||inactive)return;
   inactive=true;
   panel.hidden=true;
-  lastLesson=null;lastCue=null;
+  lastLesson=null;lastCue=null;blockedPreviousCue=null;
   stopWatchingVideo();stopWatchingCaptions();
   // Fail closed: release the model and all private course/caption caches.
   session.setLesson(null);
@@ -197,22 +197,40 @@
    // On SPA navigation outside the approved lesson path, erase the old course,
    // loaded model and cached transcripts. Do it only once per departure.
    if(lastLesson!==null){lastLesson=null;void session.setLesson(null)}
-   panel.hidden=true;caption.textContent="";caption.hidden=true;lastCue=null;video=null;
+   panel.hidden=true;caption.textContent="";caption.hidden=true;
+   lastCue=null;blockedPreviousCue=null;video=null;
    stopWatchingVideo();stopWatchingCaptions();refresh();return;
   }
   if(!panel.isConnected||!caption.isConnected)reposition();
   const current=getVideo();
-  if(current!==video){video=current;lastCue=null;lastLesson=null;cancelCaption()}
+  if(current!==video){
+   video=current;lastCue=null;lastLesson=null;blockedPreviousCue=null;cancelCaption();
+  }
   watchVideo(video);
   watchCaptionNode();
   if(!video){refresh();return}
   const lesson=getLesson();
   if(!lesson){cancelCaption();refresh();return}
   const key=JSON.stringify(lesson);
-  if(key!==lastLesson){lastLesson=key;lastCue=null;void session.setLesson(lesson).then(()=>refresh()).catch(()=>refresh())}
+  if(key!==lastLesson){
+   // The player and DOM can still contain the previous lecture's captions
+   // while a single-page navigation switches the lecture URL.
+   // Quarantine exactly that last source cue until the caption source changes.
+   blockedPreviousCue=lastLesson!==null?lastCue:null;
+   lastLesson=key;lastCue=null;
+   void session.setLesson(lesson).then(()=>refresh()).catch(()=>refresh());
+  }
   const cue=video.seeking||video.ended||endedVideo===video
    ?{text:""}:cueFromTrack(video)||cueFromDom()||{text:""};
   const cueKey=JSON.stringify(cue);
+  if(blockedPreviousCue!==null){
+   if(cueKey===blockedPreviousCue){
+    // Do not translate or show an obsolete caption under the new lecture ID.
+    if(lastCue!==cueKey){lastCue=cueKey;session.clear()}
+    refresh();return;
+   }
+   blockedPreviousCue=null;
+  }
   if(cueKey!==lastCue){lastCue=cueKey;void session.showCue(cue).catch(()=>{})}
   refresh();
  }

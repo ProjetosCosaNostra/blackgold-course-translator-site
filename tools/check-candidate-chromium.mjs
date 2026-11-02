@@ -285,9 +285,15 @@ async function main(){
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Temporary translation failure'"),"return to same-language passthrough");
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.destroyed"),1,"Changing language pair must destroy the old session");
 
- // SPA lecture navigation with same video must not continue showing the old caption.
- await evaluate("(()=>{document.querySelector('[data-purpose=\"captions-display\"]').textContent='Second lesson text';document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Synthetic lesson two';history.pushState({},'','/course/local-fixture/learn/lecture-2');return true})()");
- await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"SPA lesson transition",10000);
+ // A SPA transition can update the lecture URL before updating the player's
+ // caption DOM. The caption from lecture 1 must never be assigned to lecture 2.
+ await evaluate("(()=>{history.pushState({},'','/course/local-fixture/learn/lecture-2');document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Synthetic lesson two';return true})()");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"quarantine old caption at lecture transition",4000);
+ await pause(1000);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Old lecture caption must stay hidden until source updates");
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"","Old caption text must not remain in overlay");
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Second lesson text'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"new lecture subtitle after DOM update",10000);
  // Navigation outside supported route must clear captions and hide the panel.
  await evaluate("history.pushState({},'','/my-courses')");
  await until(async()=>await evaluate("document.getElementById('"+panelId+"').hidden&&document.getElementById('"+captionId+"').hidden"),"SPA departure cleanup",10000);

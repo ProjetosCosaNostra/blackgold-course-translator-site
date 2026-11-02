@@ -28,3 +28,6 @@ If native Translator.create() throws, rejects, or yields a session without trans
 
 ## Close/reopen memory safety
 The X and Close panel actions now stop watching captions, clear translated text and caches, release the model and pause background polling. Only an explicit popup open restores the panel; the learner must activate the model again. The Chrome for Testing synthetic flow verifies model disposal, no hidden translation work, and explicit reopening without automatic downloads. No real Udemy account or original 0.6.0 source was tested.
+
+## Delayed caption DOM on lecture switch (2026-11-02)
+On single-page course navigation, the old caption DOM can survive briefly while the lecture ID changes. The candidate records the last cue from the preceding lesson and quarantines an identical cue under the new lecture ID until the source changes. The old overlay is cleared, and the new cue is not translated from the former lesson. This is covered in Chrome for Testing by changing the synthetic lecture URL first and the subtitle DOM later. The original installed extension and real Udemy lesson behavior remain unverified.
