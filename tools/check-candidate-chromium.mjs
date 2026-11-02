@@ -272,6 +272,30 @@ async function main(){
   const nativePairStatus=await isolated("(async()=>{try{return await globalThis.Translator.availability({sourceLanguage:'en',targetLanguage:'pt'})}catch(e){return 'error:'+String(e?.name||'unknown')}})()");
   console.log("BGCT NATIVE EN->PT AVAILABILITY ONLY (no model create/download): "+JSON.stringify(nativePairStatus));
   assert.equal(typeof nativePairStatus,"string","Native availability should return a status string");
+  // Native translation is attempted ONLY if Chrome reports the model ALREADY installed.
+  // A downloadable/downloading model must never be created by automated CI.
+  if(nativePairStatus==="available"&&nativeProbe.create==="function"){
+   const nativeResult=await isolated(`(async()=>{
+    const abort=new AbortController();
+    const limit=setTimeout(()=>abort.abort(),12000);
+    let session;
+    try{
+     session=await Promise.race([
+      globalThis.Translator.create({sourceLanguage:'en',targetLanguage:'pt',signal:abort.signal}),
+      new Promise((_,reject)=>abort.signal.addEventListener('abort',()=>reject(new Error('native-test-timeout')),{once:true}))
+     ]);
+     const output=await Promise.race([
+      session.translate('Hello, welcome to the lesson.',{signal:abort.signal}),
+      new Promise((_,reject)=>abort.signal.addEventListener('abort',()=>reject(new Error('native-translation-timeout')),{once:true}))
+     ]);
+     return {ok:typeof output==='string'&&output.trim().length>0,outputType:typeof output};
+    }finally{clearTimeout(limit);try{session?.destroy?.()}catch{}}
+   })()`);
+   assert.equal(nativeResult?.ok,true,"Installed native model must return nonempty translation");
+   console.log("BGCT NATIVE INSTALLED-MODEL TRANSLATION PASS — native session created, translated, destroyed; no model download.");
+  }else{
+   console.log("BGCT NATIVE TRANSLATION NOT TESTED — model not installed or API unavailable; no download attempted.");
+  }
  }
  const mockScript=String.raw`
  (()=>{
