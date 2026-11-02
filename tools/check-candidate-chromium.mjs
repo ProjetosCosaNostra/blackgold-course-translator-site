@@ -229,6 +229,9 @@ async function main(){
  await isolated("(()=>{const v=document.querySelector('video');Object.defineProperty(v,'textTracks',{configurable:true,value:[{language:'pt-BR',mode:'showing',activeCues:[{id:'bad',startTime:0,endTime:4,text:'Legenda portuguesa'}],addEventListener(){},removeEventListener(){}}]});return true})()");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"mismatched subtitle language not displayed as source",5000);
  assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"");
+ await isolated("(()=>{const v=document.querySelector('video');Object.defineProperty(v,'textTracks',{configurable:true,value:[{language:'es',mode:'showing',activeCues:[{id:'es',startTime:0,endTime:4,text:'Español activo'}],addEventListener(){},removeEventListener(){}},{language:'',mode:'showing',activeCues:[{id:'unidentified',startTime:0,endTime:4,text:'Unknown subtitle'}],addEventListener(){},removeEventListener(){}}]});return true})()");
+ await pause(850);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Unidentified subtitle cannot bypass visibly selected different language");
  await isolated("(()=>{const v=document.querySelector('video');delete v.textTracks;return true})()");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"DOM fallback resumes after tracks removed",5000);
  console.log("BGCT TRACK LANGUAGE PASS — matching en-US captions prioritized, mismatched pt-BR suppressed, DOM fallback restored.");
