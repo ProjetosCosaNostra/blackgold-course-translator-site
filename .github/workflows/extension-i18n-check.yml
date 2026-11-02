@@ -25,4 +25,6 @@ jobs:
         with:
           node-version: '22'
       - name: Validate localized extension resources
-        run: node tools/check-extension-i18n.mjs
+        run: |
+          node tools/check-extension-i18n.mjs
+          node tools/check-translator-api.mjs

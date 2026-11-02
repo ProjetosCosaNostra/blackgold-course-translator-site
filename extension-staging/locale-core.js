@@ -35,6 +35,7 @@ function message(key,locale,args={}){
 const statusKeys=Object.freeze({
  "api-unavailable":"statusApiUnavailable",
  "pair-unavailable":"statusPairUnavailable",
+ "needs-activation":"statusNeedsActivation",
  downloading:"statusDownloading",
  loading:"statusLoading",
  translating:"statusTranslating",

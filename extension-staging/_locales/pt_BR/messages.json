@@ -83,5 +83,9 @@
   "errorUnsupportedPage": {
     "message": "Esta página de curso não é compatível",
     "description": "Proposed UI string; verify product scope before integration."
+  },
+  "statusNeedsActivation": {
+    "message": "Clique para iniciar a tradução",
+    "description": "The local model can be started from a real user interaction; do not start downloads during passive page load."
   }
 }

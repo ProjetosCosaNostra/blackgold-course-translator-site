@@ -1,6 +1,5 @@
-// Generated staging catalog; do not modify the local extension release or assume integration.
-(function(root){ "use strict";
-root.BGCT_STAGING_CATALOGS = Object.freeze({
+// Staging catalog generated from locale message resources; do not merge into the shipping extension without source review.
+(function(root){"use strict";root.BGCT_STAGING_CATALOGS=Object.freeze({
   "en": {
     "extensionName": "BlackGold Course Translator",
     "extensionDescription": "Synchronized translation of captions and transcripts for supported online courses.",
@@ -21,7 +20,8 @@ root.BGCT_STAGING_CATALOGS = Object.freeze({
     "labelTargetLanguage": "Translation language",
     "labelEcosystem": "Ecosystem",
     "errorNoCaptions": "No captions or transcript available",
-    "errorUnsupportedPage": "This course page is not supported"
+    "errorUnsupportedPage": "This course page is not supported",
+    "statusNeedsActivation": "Click to start translation"
   },
   "pt_BR": {
     "extensionName": "BlackGold Course Translator",
@@ -43,7 +43,8 @@ root.BGCT_STAGING_CATALOGS = Object.freeze({
     "labelTargetLanguage": "Idioma da tradução",
     "labelEcosystem": "Ecossistema",
     "errorNoCaptions": "Nenhuma legenda ou transcrição disponível",
-    "errorUnsupportedPage": "Esta página de curso não é compatível"
+    "errorUnsupportedPage": "Esta página de curso não é compatível",
+    "statusNeedsActivation": "Clique para iniciar a tradução"
   },
   "es": {
     "extensionName": "BlackGold Course Translator",
@@ -65,7 +66,8 @@ root.BGCT_STAGING_CATALOGS = Object.freeze({
     "labelTargetLanguage": "Idioma de traducción",
     "labelEcosystem": "Ecosistema",
     "errorNoCaptions": "No hay subtítulos ni transcripción disponibles",
-    "errorUnsupportedPage": "Esta página del curso no es compatible"
+    "errorUnsupportedPage": "Esta página del curso no es compatible",
+    "statusNeedsActivation": "Haz clic para iniciar la traducción"
   }
 });
 })(globalThis);
