@@ -248,7 +248,7 @@
   for(let parent=node;parent&&parent.nodeType===1;parent=parent.parentElement){
    if(parent.hidden||parent.getAttribute("aria-hidden")==="true")return null;
    const style=getComputedStyle(parent);
-   if(style.display==="none"||style.visibility==="hidden")return null;
+   if(style.display==="none"||style.visibility==="hidden"||style.visibility==="collapse"||Number(style.opacity)===0)return null;
    if(parent===document.body)break;
   }
   const text=(node.textContent||"").replace(/\s+/g," ").trim().slice(0,1500);
