@@ -9,3 +9,5 @@ Call setLesson with courseId, lectureId, sourceLanguage and targetLanguage. The 
 The model is retained across lecture changes for the same language pair. Changing language pair requires another availability check and a new user activation. No installed extension, real course, browser or mobile functionality has been verified here.
 
 Validation: node tools/check-session-controller.mjs, run by GitHub Actions on staging.
+
+Navigating between lectures while the same language model is still being created returns model-loading and preserves the in-flight creation. This avoids a repeated user download/activation request. Tests simulate the delayed model and verify it is not aborted until the session closes.

@@ -35,7 +35,11 @@ function makeSession(config={}){
   if(!pairChanged){
    if(runtime.snapshot().ready)return Promise.resolve({ok:true,code:"ready"});
    if(preparing)return preparing;
-   if(runtime.snapshot().pending)return Promise.resolve({ok:true,code:"needs-activation"});
+   const model=runtime.snapshot();
+   if(model.pending)return Promise.resolve({ok:true,code:"needs-activation"});
+   // A lecture transition during model download must not cancel/restart it.
+   if(model.state==="loading"||model.state==="downloading")
+    return Promise.resolve({ok:true,code:"model-loading"});
   }
   const token=++revision;
   const task=(async()=>{

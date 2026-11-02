@@ -73,4 +73,30 @@ assert.equal(destroyed,2);
 assert.equal(s.snapshot().closed,true);
 assert.equal(s.snapshot().cacheSize,0);
 assert.ok(states.includes("translating"));
+
+let releaseModel;
+let startedModels=0;
+let cancelledModels=0;
+const slowModel=make({TranslatorCtor:{
+ availability:async()=>"downloadable",
+ create(options){
+  startedModels++;
+  options.signal?.addEventListener("abort",()=>{cancelledModels++},{once:true});
+  return new Promise(resolve=>{releaseModel=resolve});
+ }
+}});
+const slowLesson={courseId:"course-slow",lectureId:"part-1",sourceLanguage:"en",targetLanguage:"pt"};
+assert.equal((await slowModel.setLesson(slowLesson)).code,"needs-activation");
+const modelStarting=slowModel.activateFromGesture();
+assert.equal(startedModels,1);
+assert.equal((await slowModel.setLesson({...slowLesson,lectureId:"part-2"})).code,"model-loading",
+ "Same language pair must not restart a model downloading during lecture navigation");
+assert.equal(startedModels,1);
+assert.equal(cancelledModels,0);
+releaseModel({async translate(t){return t},destroy(){}});
+assert.equal((await modelStarting).code,"ready");
+assert.equal(slowModel.snapshot().ready,true);
+slowModel.close();
+assert.equal(cancelledModels,1);
+
 console.log("BGCT SESSION CONTROLLER PASS: passive probe, trusted gesture, active cues, lesson reuse, language reset, cache clearing and safe close.");
