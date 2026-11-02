@@ -12,7 +12,7 @@
  const localeApi=globalThis.BGCT_STAGING_LOCALE;
  const factory=globalThis.BGCT_STAGING_SESSION;
  if(!localeApi||!factory||!document.body)return;
- let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,inactive=false,lastCue=null,blockedPreviousCue=null;
+ let locale="en",source="en",target="pt",state="idle",detail={},frame=null,video=null,lastLesson=null,closed=false,inactive=false,lastCue=null,blockedPreviousCue=null,blockedCaptionVersion=null,captionEventVersion=0,routeHidden=false;
  let observedVideo=null,observedTracks=[],observedCaption=null,captionObserver=null,endedVideo=null;
  const captionSelector='[data-purpose="captions-display"],[data-purpose="captions-container"],[class*="captions-display--captions-container"]';
  const tags={en:"English",pt:"Português",es:"Español"};
@@ -94,7 +94,7 @@
   if(closed||inactive)return;
   inactive=true;
   panel.hidden=true;
-  lastLesson=null;lastCue=null;blockedPreviousCue=null;
+  lastLesson=null;lastCue=null;blockedPreviousCue=null;blockedCaptionVersion=null;
   stopWatchingVideo();stopWatchingCaptions();
   // Fail closed: release the model and all private course/caption caches.
   session.setLesson(null);
@@ -112,7 +112,7 @@
  }
  document.addEventListener("fullscreenchange",reposition);
  // React to player activity immediately; the 700ms poll remains a defensive fallback.
- function cueChanged(){if(!closed)sync()}
+ function cueChanged(){captionEventVersion++;if(!closed)sync()}
  function onSeekStart(){lastCue=null;cancelCaption()}
  function onMediaEnd(){endedVideo=video;lastCue=null;cancelCaption()}
  function onMediaResume(){endedVideo=null;lastCue=null;sync()}
@@ -153,7 +153,7 @@
   if(node===observedCaption)return;
   captionObserver?.disconnect();captionObserver=null;observedCaption=node;
   if(node&&typeof MutationObserver==="function"){
-   captionObserver=new MutationObserver(()=>{if(!closed)sync()});
+   captionObserver=new MutationObserver(()=>{captionEventVersion++;if(!closed)sync()});
    captionObserver.observe(node,{subtree:true,childList:true,characterData:true});
   }
  }
@@ -197,14 +197,20 @@
    // On SPA navigation outside the approved lesson path, erase the old course,
    // loaded model and cached transcripts. Do it only once per departure.
    if(lastLesson!==null){lastLesson=null;void session.setLesson(null)}
-   panel.hidden=true;caption.textContent="";caption.hidden=true;
-   lastCue=null;blockedPreviousCue=null;video=null;
+   panel.hidden=true;routeHidden=true;caption.textContent="";caption.hidden=true;
+   lastCue=null;blockedPreviousCue=null;blockedCaptionVersion=null;video=null;
    stopWatchingVideo();stopWatchingCaptions();refresh();return;
+  }
+  if(routeHidden){
+   // The panel was hidden by an unsupported route, not by the learner.
+   // Restore the in-page control when returning to a lesson.
+   panel.hidden=false;routeHidden=false;
   }
   if(!panel.isConnected||!caption.isConnected)reposition();
   const current=getVideo();
   if(current!==video){
-   video=current;lastCue=null;lastLesson=null;blockedPreviousCue=null;cancelCaption();
+   video=current;lastCue=null;lastLesson=null;
+   blockedPreviousCue=null;blockedCaptionVersion=null;cancelCaption();
   }
   watchVideo(video);
   watchCaptionNode();
@@ -217,6 +223,7 @@
    // while a single-page navigation switches the lecture URL.
    // Quarantine exactly that last source cue until the caption source changes.
    blockedPreviousCue=lastLesson!==null?lastCue:null;
+   blockedCaptionVersion=blockedPreviousCue!==null?captionEventVersion:null;
    lastLesson=key;lastCue=null;
    void session.setLesson(lesson).then(()=>refresh()).catch(()=>refresh());
   }
@@ -224,12 +231,14 @@
    ?{text:""}:cueFromTrack(video)||cueFromDom()||{text:""};
   const cueKey=JSON.stringify(cue);
   if(blockedPreviousCue!==null){
-   if(cueKey===blockedPreviousCue){
-    // Do not translate or show an obsolete caption under the new lecture ID.
+   if(cueKey===blockedPreviousCue&&captionEventVersion===blockedCaptionVersion){
+    // Same inherited cue, with no new caption-source event: quarantine it.
     if(lastCue!==cueKey){lastCue=cueKey;session.clear()}
     refresh();return;
    }
-   blockedPreviousCue=null;
+   // An actual TextTrack cuechange or caption DOM mutation is evidence of a
+   // new cue even when two consecutive lessons use the identical phrase.
+   blockedPreviousCue=null;blockedCaptionVersion=null;
   }
   if(cueKey!==lastCue){lastCue=cueKey;void session.showCue(cue).catch(()=>{})}
   refresh();

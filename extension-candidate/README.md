@@ -31,3 +31,6 @@ The X and Close panel actions now stop watching captions, clear translated text 
 
 ## Delayed caption DOM on lecture switch (2026-11-02)
 On single-page course navigation, the old caption DOM can survive briefly while the lecture ID changes. The candidate records the last cue from the preceding lesson and quarantines an identical cue under the new lecture ID until the source changes. The old overlay is cleared, and the new cue is not translated from the former lesson. This is covered in Chrome for Testing by changing the synthetic lecture URL first and the subtitle DOM later. The original installed extension and real Udemy lesson behavior remain unverified.
+
+## Identical caption text across two lessons (2026-11-02)
+After SPA lecture navigation, the candidate still quarantines a carried-over caption until the source changes. However, a new `TextTrack.cuechange` event or an observed DOM caption mutation releases the quarantine even when the new lecture repeats exactly the same words. This avoids permanently hiding a legitimate repeated sentence. Leaving a supported route hides the panel; returning to a lesson restores it unless the learner explicitly closed it. Synthetic Chrome tests cover both scenarios. No live Udemy selectors or native-language-model translations have been validated.

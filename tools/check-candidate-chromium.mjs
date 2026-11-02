@@ -294,13 +294,25 @@ async function main(){
  assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"","Old caption text must not remain in overlay");
  await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Second lesson text'");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"new lecture subtitle after DOM update",10000);
+
+ // Repeating the exact phrase in the NEXT lesson must not leave the overlay
+ // blocked forever. Only a new cuechange/DOM mutation releases the quarantine.
+ await evaluate("history.pushState({},'','/course/local-fixture/learn/lecture-3')");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"quarantine repeated phrase on next lesson",4000);
+ await pause(900);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"No source event: old caption remains blocked");
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Second lesson text'");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"same legitimate phrase after fresh DOM cue",5000);
+ console.log("BGCT SAME-PHRASE LECTURE PASS — old cue held until source event; identical new cue then rendered.");
+
  // Navigation outside supported route must clear captions and hide the panel.
  await evaluate("history.pushState({},'','/my-courses')");
  await until(async()=>await evaluate("document.getElementById('"+panelId+"').hidden&&document.getElementById('"+captionId+"').hidden"),"SPA departure cleanup",10000);
  assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"");
- // Extension remains mounted and can be restored after reentering a supported lesson.
- await evaluate("history.pushState({},'','/course/local-fixture/learn/lecture-3')");
+ // Extension remains mounted and the panel is restored after returning to a lesson.
+ await evaluate("history.pushState({},'','/course/local-fixture/learn/lecture-4')");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"reentered course",10000);
+ assert.equal(await evaluate("document.getElementById('"+panelId+"').hidden"),false,"Returning to a supported lesson must restore the panel");
  console.log("BGCT REAL CHROMIUM MV3 SMOKE PASS — installed unpacked in disposable profile, HTTPS synthetic lesson, scoped injection, DOM captions, same-language passthrough, PT-BR/EN/ES controls, fullscreen where available, lecture SPA, route cleanup.");
  console.log("SCOPE: Synthetic browser fixture only. NOT a real Udemy course or original 0.6.0 extension.");
 
