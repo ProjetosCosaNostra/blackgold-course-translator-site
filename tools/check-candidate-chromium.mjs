@@ -142,6 +142,26 @@ async function main(){
  assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),false);
  const sourceText=await evaluate("document.getElementById('"+captionId+"').textContent");
  assert.equal(sourceText,"Synthetic English caption");
+
+ // In a real browser, language changes must update the in-page controls without reloading.
+ await evaluate("(()=>{const e=document.getElementById('bgct-candidate-ui');e.value='pt_BR';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await evaluate("document.querySelector('label[for=\"bgct-candidate-ui\"]')?.textContent==='Idioma da interface'"),"PT-BR controls",6000);
+ await evaluate("(()=>{const e=document.getElementById('bgct-candidate-ui');e.value='es';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await evaluate("document.querySelector('label[for=\"bgct-candidate-ui\"]')?.textContent==='Idioma de la interfaz'"),"ES controls",6000);
+ await evaluate("(()=>{const e=document.getElementById('bgct-candidate-ui');e.value='en';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+ await until(async()=>await evaluate("document.querySelector('label[for=\"bgct-candidate-ui\"]')?.textContent==='Interface language'"),"EN controls",6000);
+ // Fullscreen relocation is checked when supported by the headless build.
+ const isFullscreenEnabled=await evaluate("document.fullscreenEnabled");
+ if(isFullscreenEnabled){
+  const entered=await evaluate("(async()=>{try{await document.getElementById('player-wrapper').requestFullscreen();return 'ok'}catch(e){return e.name}})()",true);
+  if(entered==="ok"){
+   await until(async()=>await evaluate("document.fullscreenElement!==null&&document.getElementById('bgct-candidate-panel').parentNode===document.fullscreenElement"),"fullscreen overlay relocation",6000);
+   assert.equal(await evaluate("document.getElementById('bgct-candidate-caption').parentNode===document.fullscreenElement"),true);
+   await evaluate("document.exitFullscreen()");
+   await until(async()=>await evaluate("document.fullscreenElement===null&&document.getElementById('bgct-candidate-panel').parentNode===document.body"),"exit fullscreen overlay relocation",6000);
+  }else console.log("BGCT FULLSCREEN CHECK SKIPPED: headless build rejected requestFullscreen ("+entered+")");
+ }else console.log("BGCT FULLSCREEN CHECK SKIPPED: fullscreen API disabled in headless runner");
+
  // SPA lecture navigation with same video must not continue showing the old caption.
  await evaluate("(()=>{document.querySelector('[data-purpose=\"captions-display\"]').textContent='Second lesson text';document.querySelector('[data-purpose=\"lecture-title\"]').textContent='Synthetic lesson two';history.pushState({},'','/course/local-fixture/learn/lecture-2');return true})()");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"SPA lesson transition",10000);
@@ -152,7 +172,7 @@ async function main(){
  // Extension remains mounted and can be restored after reentering a supported lesson.
  await evaluate("history.pushState({},'','/course/local-fixture/learn/lecture-3')");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Second lesson text'"),"reentered course",10000);
- console.log("BGCT REAL CHROMIUM MV3 SMOKE PASS — installed unpacked in disposable profile, HTTPS synthetic lesson, scoped injection, DOM captions, same-language passthrough, lecture SPA, route cleanup.");
+ console.log("BGCT REAL CHROMIUM MV3 SMOKE PASS — installed unpacked in disposable profile, HTTPS synthetic lesson, scoped injection, DOM captions, same-language passthrough, PT-BR/EN/ES controls, fullscreen where available, lecture SPA, route cleanup.");
  console.log("SCOPE: Synthetic browser fixture only. NOT a real Udemy course or original 0.6.0 extension.");
 }
 try{await main()}catch(e){
