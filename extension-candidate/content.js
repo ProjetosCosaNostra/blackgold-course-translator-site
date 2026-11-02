@@ -264,7 +264,7 @@
   if(current!==video){
    // A replacement lecture player can arrive while the old caption DOM
    // still shows the previous video's final cue. Quarantine that exact cue.
-   const inheritedCue=video?lastCue:null;
+   const inheritedCue=video?(lastCue||blockedPreviousCue):blockedPreviousCue;
    video=current;lastCue=null;lastMeaningfulCue=null;mediaBoundaryCue=null;
    mediaSource=readMediaSource(video);mediaRevision=0;lastLesson=null;
    blockedPreviousCue=inheritedCue;blockedCaptionVersion=inheritedCue!==null?captionEventVersion:null;
