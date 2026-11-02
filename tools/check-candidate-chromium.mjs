@@ -8,7 +8,11 @@ import https from "node:https";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
-const ext=path.join(root,"extension-candidate");
+// CI package job points this to files extracted from the verified ZIP.
+const ext=process.env.BGCT_CANDIDATE_DIR
+ ?path.resolve(process.env.BGCT_CANDIDATE_DIR):path.join(root,"extension-candidate");
+if(!fs.existsSync(path.join(ext,"manifest.json")))
+ throw Error("Missing candidate manifest at extension root: "+ext);
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"bgct-chromium-smoke-"));
 const cert=path.join(tmp,"cert.pem"),key=path.join(tmp,"key.pem"),profile=path.join(tmp,"chrome");
 const launched=[];
