@@ -176,14 +176,30 @@
  }
  function cueFromTrack(element){
   const tracks=element?.textTracks;
-  if(!tracks)return null;
+  if(!tracks)return {cue:null,wrongLanguageShowing:false};
+  const sourceBase=String(source).toLowerCase().replace(/_/g,"-").split("-")[0];
+  const options=[];
+  let wrongLanguageShowing=false;
   for(const track of Array.from(tracks)){
-   if(track.mode==="disabled"||!track.activeCues?.length)continue;
-   const active=Array.from(track.activeCues);
+   if(track.mode==="disabled")continue;
+   const language=typeof track.language==="string"?track.language.trim().toLowerCase().replace(/_/g,"-").split("-")[0]:"";
+   const matching=language===sourceBase;
+   if(track.mode==="showing"&&language&&!matching)wrongLanguageShowing=true;
+   if(language&&!matching)continue;
+   const active=track.activeCues?Array.from(track.activeCues):[];
    const text=active.map(c=>String(c.text||"").replace(/<[^>]*>/g,"")).filter(Boolean).join("\n").trim();
-   if(text)return {cueId:active.map(c=>c.id||c.startTime+"-"+c.endTime).join("|"),startMs:Math.round(active[0].startTime*1000),endMs:Math.round(active[active.length-1].endTime*1000),text:text.slice(0,1500)};
+   if(!text)continue;
+   options.push({
+    priority:(matching?2:0)+(track.mode==="showing"?1:0),
+    cue:{cueId:active.map(c=>c.id||c.startTime+"-"+c.endTime).join("|"),
+     startMs:Math.round(active[0].startTime*1000),
+     endMs:Math.round(active[active.length-1].endTime*1000),
+     text:text.slice(0,1500)}
+   });
   }
-  return null;
+  // Exact source-language match takes precedence over unidentified tracks.
+  options.sort((a,b)=>b.priority-a.priority);
+  return {cue:options[0]?.cue||null,wrongLanguageShowing};
  }
  function cueFromDom(){
   const node=document.querySelector(captionSelector);
@@ -227,8 +243,9 @@
    lastLesson=key;lastCue=null;
    void session.setLesson(lesson).then(()=>refresh()).catch(()=>refresh());
   }
+  const trackChoice=cueFromTrack(video);
   const cue=video.seeking||video.ended||endedVideo===video
-   ?{text:""}:cueFromTrack(video)||cueFromDom()||{text:""};
+   ?{text:""}:trackChoice.cue||(!trackChoice.wrongLanguageShowing?cueFromDom():null)||{text:""};
   const cueKey=JSON.stringify(cue);
   if(blockedPreviousCue!==null){
    if(cueKey===blockedPreviousCue&&captionEventVersion===blockedCaptionVersion){

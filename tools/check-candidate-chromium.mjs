@@ -160,6 +160,34 @@ async function main(){
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"restore fixture cue",4000);
 
 
+
+ // Test real MV3 selection logic against several simultaneously readable
+ // in-browser TextTrack-like sources. The source-language match must outrank
+ // the first track, and a visibly mismatched track must not be relabeled.
+ const multiTrackFixture=String.raw`
+ (()=>{
+  const video=document.querySelector('video');
+  const makeTrack=(language,text)=>({
+   language,mode:'showing',
+   activeCues:[{id:'0',startTime:0,endTime:3,text}],
+   addEventListener(){},removeEventListener(){}
+  });
+  const wrong=makeTrack('es','Texto en español');
+  const matching=makeTrack('en-US','English from selected source');
+  Object.defineProperty(video,'textTracks',{configurable:true,value:[wrong,matching]});
+  return true;
+ })()
+ `;
+ assert.equal(await evaluate(multiTrackFixture),true);
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='English from selected source'"),"matching en-US track preferred over first Spanish track",5000);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"English from selected source");
+ await evaluate("(()=>{const v=document.querySelector('video');Object.defineProperty(v,'textTracks',{configurable:true,value:[{language:'pt-BR',mode:'showing',activeCues:[{id:'bad',startTime:0,endTime:4,text:'Legenda portuguesa'}],addEventListener(){},removeEventListener(){}}]});return true})()");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').hidden"),"mismatched subtitle language not displayed as source",5000);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').textContent"),"");
+ await evaluate("(()=>{const v=document.querySelector('video');delete v.textTracks;return true})()");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Synthetic English caption'"),"DOM fallback resumes after tracks removed",5000);
+ console.log("BGCT TRACK LANGUAGE PASS — matching en-US captions prioritized, mismatched pt-BR suppressed, DOM fallback restored.");
+
  // In a real browser, language changes must update the in-page controls without reloading.
  await evaluate("(()=>{const e=document.getElementById('bgct-candidate-ui');e.value='pt_BR';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
  await until(async()=>await evaluate("document.querySelector('label[for=\"bgct-candidate-ui\"]')?.textContent==='Idioma da interface'"),"PT-BR controls",6000);

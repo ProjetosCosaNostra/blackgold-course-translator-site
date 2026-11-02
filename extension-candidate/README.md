@@ -34,3 +34,6 @@ On single-page course navigation, the old caption DOM can survive briefly while 
 
 ## Identical caption text across two lessons (2026-11-02)
 After SPA lecture navigation, the candidate still quarantines a carried-over caption until the source changes. However, a new `TextTrack.cuechange` event or an observed DOM caption mutation releases the quarantine even when the new lecture repeats exactly the same words. This avoids permanently hiding a legitimate repeated sentence. Leaving a supported route hides the panel; returning to a lesson restores it unless the learner explicitly closed it. Synthetic Chrome tests cover both scenarios. No live Udemy selectors or native-language-model translations have been validated.
+
+## Language-aware caption track selection (2026-11-02)
+On pages with several active `HTMLVideoElement.textTracks`, the candidate now prioritizes the track matching the learner's selected source language (including region-tagged codes, such as en-US → en). A visible track explicitly labeled in another language prevents treating arbitrary DOM caption text as the source when no matching active cue exists. Unknown-language tracks remain eligible as a fallback. The Chrome-for-Testing synthetic fixture exercises ordered tracks and the return to DOM captions. Real Udemy subtitle track arrangements remain unverified.
