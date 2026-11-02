@@ -29,7 +29,14 @@ function makeCoordinator(config={}){
  }
  function setContext(input){
   const next=readContext(input);
-  if(!next){emit("error","",{reason:"invalid-context"});return false}
+  if(!next){
+   // Fail closed: invalid page/lesson metadata must not retain the former course.
+   ++revision;activeKey=null;activePromise=null;context=null;cache.clear();
+   if(typeof runtime.reset==="function")runtime.reset();
+   else if(typeof runtime.cancelPending==="function")runtime.cancelPending();
+   emit("error","",{reason:"invalid-context"});
+   return false;
+  }
   const changed=!context||Object.keys(next).some(field=>context[field]!==next[field]);
   if(!changed)return true;
   const previous=context;
@@ -38,6 +45,9 @@ function makeCoordinator(config={}){
    previous.sourceLanguage!==next.sourceLanguage||
    previous.targetLanguage!==next.targetLanguage
   );
+  const courseChanged=previous&&previous.courseId!==next.courseId;
+  // Never retain a different course's caption text or outdated language-pair cache.
+  if(courseChanged||pairChanged)cache.clear();
   // Preserve downloaded model when only lecture changes.
   if(pairChanged&&typeof runtime.reset==="function")runtime.reset();
   else if(typeof runtime.cancelPending==="function")runtime.cancelPending();
@@ -112,12 +122,18 @@ function makeCoordinator(config={}){
   if(typeof runtime.cancelPending==="function")runtime.cancelPending();
   emit("no-caption");
  }
+ function close(){
+  ++revision;activeKey=null;activePromise=null;context=null;cache.clear();
+  if(typeof runtime.reset==="function")runtime.reset();
+  else if(typeof runtime.cancelPending==="function")runtime.cancelPending();
+  emit("idle");
+ }
  function snapshot(){
   return Object.freeze({hasContext:Boolean(context),courseId:context?.courseId??null,
    lectureId:context?.lectureId??null,cacheSize:cache.size,revision,
    state:last?.state??"idle"});
  }
- return Object.freeze({setContext,showCue,clear,snapshot});
+ return Object.freeze({setContext,showCue,clear,close,snapshot});
 }
 root.BGCT_STAGING_CAPTIONS=Object.freeze({makeCoordinator});
 if(typeof module!=="undefined"&&module.exports)module.exports=root.BGCT_STAGING_CAPTIONS;

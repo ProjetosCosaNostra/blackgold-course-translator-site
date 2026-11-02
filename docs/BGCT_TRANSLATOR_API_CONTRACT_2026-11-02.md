@@ -44,3 +44,11 @@ Full original extension source, real Chrome/Edge tests, actual Udemy caption int
 - `cancelPending()` cancela apenas a tradução atual sem descartar o modelo. O sinal da sessão não é cancelado a cada legenda.
 - Testes simulados de cancelamento da criação e liberação do modelo incluídos; não comprova compatibilidade da extensão real.
 - Fontes: https://developer.mozilla.org/en-US/docs/Web/API/Translator/create_static ; https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api .
+
+
+## 2026-11-02 — privacidade e integração de contratos de legendas
+- Detectado risco lógico na versão de staging: ao alternar entre cursos, as traduções anteriores permaneciam no cache local, embora a chave impedisse sua reutilização acidental. Agora o cache é apagado quando o curso ou par de idiomas muda.
+- Contexto inválido limpa a identidade do curso anterior, descarta traduções pendentes e bloqueia renderização obsoleta.
+- Nova função `close()` encerra a sessão, apaga cache e contexto, impede retorno de texto antigo após fechar o painel.
+- Testes `check-caption-coordinator.mjs` cobrem limpeza ao trocar de curso, contexto inválido, resultados atrasados e fechamento.
+- Novo `check-staging-integration.mjs` exercita **juntos** o adapter Translator e coordenador: modelo, legendas concorrentes, troca de aula, troca de idioma, cache e liberação. São simulações, **não testes em aula real**.

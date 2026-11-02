@@ -71,4 +71,44 @@ assert.equal(draws.at(-1).text,"NOVA AULA");
 coord.clear();
 assert.equal(draws.at(-1).state,"no-caption");
 assert.equal(coord.snapshot().hasContext,true);
+
+const privacyQueue=[],privacyDraws=[],privacyCalls=[];
+const privateRuntime={
+ translate(text){return new Promise(resolve=>privacyQueue.push({text,resolve}))},
+ cancelPending(){privacyCalls.push("cancel")},
+ reset(){privacyCalls.push("reset")}
+};
+const privacy=make({runtime:privateRuntime,onRender:x=>privacyDraws.push(x)});
+const p1={courseId:"private-A",lectureId:"lesson-A",sourceLanguage:"en",targetLanguage:"es"};
+const p2={courseId:"private-B",lectureId:"lesson-A",sourceLanguage:"en",targetLanguage:"es"};
+assert.equal(privacy.setContext(p1),true);
+const priv1=privacy.showCue({cueId:"A",text:"secret contents"});
+privacyQueue[0].resolve({ok:true,code:"translated",text:"secret translation"});
+await priv1;
+assert.equal(privacy.snapshot().cacheSize,1);
+privacy.setContext({...p1,lectureId:"lesson-B"});
+assert.equal(privacy.snapshot().cacheSize,1,"Same-course lesson switch may keep bounded cache");
+privacy.setContext(p2);
+assert.equal(privacy.snapshot().cacheSize,0,"Switching course clears translated caption cache");
+const priv2=privacy.showCue({cueId:"B",text:"private in progress"});
+assert.equal(privacy.snapshot().state,"pending");
+assert.equal(privacy.setContext({courseId:"invalid",lectureId:""}),false);
+assert.equal(privacy.snapshot().hasContext,false,"Invalid context must clear old course");
+assert.equal(privacy.snapshot().cacheSize,0);
+assert.equal(privacyDraws.at(-1).state,"error");
+assert.equal(privacyDraws.at(-1).courseId,null);
+privacyQueue[1].resolve({ok:true,code:"translated",text:"stale private text"});
+assert.equal((await priv2).code,"stale");
+assert.equal(privacyDraws.at(-1).state,"error","Stale result cannot revive invalid course");
+assert.equal((await privacy.showCue({text:"old"})).code,"missing-context");
+privacy.setContext(p1);
+const p3=privacy.showCue({cueId:"C",text:"close this"});
+privacy.close();
+assert.equal(privacy.snapshot().hasContext,false);
+assert.equal(privacy.snapshot().cacheSize,0,"Close erases cached user text");
+assert.equal(privacy.snapshot().state,"idle");
+privacyQueue[2].resolve({ok:true,code:"translated",text:"should not render"});
+assert.equal((await p3).code,"stale");
+assert.equal(privacyDraws.at(-1).state,"idle","Closed UI must not render stale user text");
+assert.ok(privacyCalls.filter(x=>x==="reset").length>=2,"Invalid/closed context resets runtime");
 console.log("BGCT CAPTION COORDINATOR PASS — no source flash, stale cue/lecture suppression, duplicate dedupe, bounded cache, errors, language and context.");

@@ -8,6 +8,7 @@ on:
       - 'tools/check-extension-i18n.mjs'
       - 'tools/check-translator-api.mjs'
       - 'tools/check-caption-coordinator.mjs'
+      - 'tools/check-staging-integration.mjs'
       - '.github/workflows/extension-i18n-check.yml'
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - 'tools/check-extension-i18n.mjs'
       - 'tools/check-translator-api.mjs'
       - 'tools/check-caption-coordinator.mjs'
+      - 'tools/check-staging-integration.mjs'
       - '.github/workflows/extension-i18n-check.yml'
   workflow_dispatch:
 permissions:
@@ -33,3 +35,4 @@ jobs:
           node tools/check-extension-i18n.mjs
           node tools/check-translator-api.mjs
           node tools/check-caption-coordinator.mjs
+          node tools/check-staging-integration.mjs
