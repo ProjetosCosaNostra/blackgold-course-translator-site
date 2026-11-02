@@ -238,7 +238,8 @@
   }
   // Exact source-language match takes precedence over unidentified tracks.
   options.sort((a,b)=>b.priority-a.priority);
-  return {cue:wrongLanguageShowing?null:options[0]?.cue||null,wrongLanguageShowing};
+  const matchingCue=options.find(item=>item.priority>=2)?.cue||null;
+  return {cue:matchingCue||(wrongLanguageShowing?null:options[0]?.cue||null),wrongLanguageShowing};
  }
  function cueFromDom(){
   const node=document.querySelector(captionSelector);
