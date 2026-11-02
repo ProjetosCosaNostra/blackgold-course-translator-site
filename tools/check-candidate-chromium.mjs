@@ -462,6 +462,27 @@ async function main(){
  assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true,"Model must wait for gesture after reopening");
  console.log("BGCT CHROME CLOSE/REOPEN PASS — model destroyed, captions cleared, hidden session paused, explicit reopening without automatic download.");
 
+ // Verify that changing the SAME video element's media during an in-flight
+ // model request cancels the former result, rather than showing it for the
+ // new media. This test uses the MV3 real browser path and mock model.
+ await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').click()",true);
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.created===3"),"restarted model after explicit gesture",7000);
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>"+callsBeforeClose),"pending old-media model request",7000);
+ const oldMediaRequestIndex=await isolated("globalThis.__BGCT_TEST_MOCK.requests.length-1");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests["+oldMediaRequestIndex+"].text"),"Caption while panel closed");
+ await isolated("(()=>{const v=document.querySelector('video');Object.defineProperty(v,'currentSrc',{configurable:true,value:'https://video.invalid/new-media-3.m3u8'});v.dispatchEvent(new Event('loadstart'));return true})()");
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests["+oldMediaRequestIndex+"].signal.aborted"),"abort prior media pending translation",7000);
+ assert.equal(await evaluate("document.getElementById('"+captionId+"').hidden"),true);
+ await evaluate("document.querySelector('[data-purpose=\"captions-display\"]').textContent='Fresh content in newly loaded media'");
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>"+(oldMediaRequestIndex+1)),"new media translation request",7000);
+ const newMediaRequestIndex=await isolated("globalThis.__BGCT_TEST_MOCK.requests.length-1");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests["+newMediaRequestIndex+"].text"),"Fresh content in newly loaded media");
+ await isolated("globalThis.__BGCT_TEST_MOCK.requests["+newMediaRequestIndex+"].resolve('Legenda da mídia nova');true");
+ await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Legenda da mídia nova'"),"correct translated new media cue",7000);
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.created"),3,"Media transitions must reuse ready pair model");
+ console.log("BGCT MEDIA-SWITCH PENDING TRANSLATION PASS — obsolete request aborted; new media translation displayed using the retained model.");
+
+
 
 }
 try{await main()}catch(e){
