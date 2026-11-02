@@ -65,7 +65,7 @@
   if(!video)status.textContent=msg("errorNoCaptions");
   // Activation is permitted only after availability() completes.
   // A loaded model can instead retry the last failed caption without redownloading.
-  start.disabled=!(canRetry||(state==="needs-activation"&&!sessionState.originalMode));
+  start.disabled=!video||!(canRetry||(state==="needs-activation"&&!sessionState.originalMode));
   note.textContent=locale==="pt_BR"?"Integração com o manifesto oficial do Ecossistema pendente. Nenhum redirecionamento automático.":locale==="es"?"Integración pendiente del manifiesto oficial del Ecosistema. Sin redirección automática.":"Official Ecosystem manifest integration pending. No automatic redirects.";
   hide.setAttribute("aria-label",msg("actionClosePanel"));
  }
