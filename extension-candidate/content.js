@@ -58,9 +58,10 @@
   ecosystem.textContent=msg("labelEcosystem");clear.textContent=msg("actionClosePanel");
   const sessionState=session.snapshot();
   const canRetry=sessionState.ready&&frame?.state==="error";
-  start.textContent=msg(canRetry?"actionRetryTranslation":"statusNeedsActivation");
-  status.textContent=frame?.state==="error"?
-   localeApi.captionError(frame.reason,locale):localeApi.status(state,detail.progress,locale);
+  const modelRetry=state==="needs-activation"&&["create-failed","invalid-session"].includes(detail.reason);
+  start.textContent=msg(canRetry?"actionRetryTranslation":modelRetry?"actionRetryModel":"statusNeedsActivation");
+  status.textContent=modelRetry?localeApi.captionError(detail.reason,locale):
+   frame?.state==="error"?localeApi.captionError(frame.reason,locale):localeApi.status(state,detail.progress,locale);
   if(!video)status.textContent=msg("errorNoCaptions");
   // Activation is permitted only after availability() completes.
   // A loaded model can instead retry the last failed caption without redownloading.

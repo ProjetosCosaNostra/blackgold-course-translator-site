@@ -64,7 +64,9 @@ const captionErrorKeys=Object.freeze({
  "empty-output":"errorEmptyOutput",
  "invalid-context":"errorMissingContext",
  "missing-context":"errorMissingContext",
- "not-ready":"errorModelNotReady"
+ "not-ready":"errorModelNotReady",
+ "create-failed":"errorModelCreateFailed",
+ "invalid-session":"errorModelCreateFailed"
 });
 function captionError(reason,locale){
  const key=captionErrorKeys[reason]||"statusError";

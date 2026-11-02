@@ -86,10 +86,26 @@ function makeRuntime(config={}){
      });
     }
    });
-  }catch{downloadOpen=false;if(token===generation){abortSetup();inform("error",{reason:"create-failed"})}return {ok:false,code:"create-failed"}}
+  }catch{
+   downloadOpen=false;
+   if(token!==generation)return {ok:false,code:"stale"};
+   abortSetup();
+   // Preserve an explicitly selected language pair so the user can retry by
+   // another real click; NEVER restart model creation automatically.
+   pending=task;
+   inform("needs-activation",{availability:task.availability,reason:"create-failed"});
+   return {ok:false,code:"create-failed"};
+  }
   let translator;
   try{translator=await promise}
-  catch{downloadOpen=false;if(token!==generation)return {ok:false,code:"stale"};abortSetup();inform("error",{reason:"create-failed"});return {ok:false,code:"create-failed"}}
+  catch{
+   downloadOpen=false;
+   if(token!==generation)return {ok:false,code:"stale"};
+   abortSetup();
+   pending=task;
+   inform("needs-activation",{availability:task.availability,reason:"create-failed"});
+   return {ok:false,code:"create-failed"};
+  }
   downloadOpen=false;
   if(token!==generation){
    try{translator?.destroy?.()}catch{}
@@ -98,7 +114,8 @@ function makeRuntime(config={}){
   if(!translator||typeof translator.translate!=="function"){
    abortSetup();
    try{translator?.destroy?.()}catch{}
-   inform("error",{reason:"invalid-session"});
+   pending=task;
+   inform("needs-activation",{availability:task.availability,reason:"invalid-session"});
    return {ok:false,code:"invalid-session"};
   }
   active=translator;

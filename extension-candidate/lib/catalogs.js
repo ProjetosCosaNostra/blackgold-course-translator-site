@@ -27,7 +27,9 @@
     "errorEmptyOutput": "The browser returned no translated text. Try again.",
     "errorMissingContext": "The current lesson could not be identified.",
     "errorModelNotReady": "The translation model is not ready yet.",
-    "actionRetryTranslation": "Retry translation"
+    "actionRetryTranslation": "Retry translation",
+    "actionRetryModel": "Retry model activation",
+    "errorModelCreateFailed": "Could not start the translation model. Try again."
   },
   "pt_BR": {
     "extensionName": "BlackGold Course Translator",
@@ -56,7 +58,9 @@
     "errorEmptyOutput": "O navegador não retornou o texto traduzido. Tente novamente.",
     "errorMissingContext": "Não foi possível identificar a aula atual.",
     "errorModelNotReady": "O modelo de tradução ainda não está pronto.",
-    "actionRetryTranslation": "Tentar tradução novamente"
+    "actionRetryTranslation": "Tentar tradução novamente",
+    "actionRetryModel": "Tentar ativar o modelo novamente",
+    "errorModelCreateFailed": "Não foi possível iniciar o modelo de tradução. Tente novamente."
   },
   "es": {
     "extensionName": "BlackGold Course Translator",
@@ -85,7 +89,9 @@
     "errorEmptyOutput": "El navegador no devolvió texto traducido. Inténtalo de nuevo.",
     "errorMissingContext": "No se pudo identificar la clase actual.",
     "errorModelNotReady": "El modelo de traducción todavía no está listo.",
-    "actionRetryTranslation": "Reintentar traducción"
+    "actionRetryTranslation": "Reintentar traducción",
+    "actionRetryModel": "Reintentar activación del modelo",
+    "errorModelCreateFailed": "No se pudo iniciar el modelo de traducción. Inténtalo de nuevo."
   }
 });
 })(globalThis);

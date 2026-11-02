@@ -101,7 +101,64 @@ assert.equal((await throwing.inspect("en","es")).code,"availability-failed");
 const rejected=make({TranslatorCtor:{availability:async()=>"available",create(){throw Error("blocked")}}});
 await rejected.inspect("en","pt");
 assert.equal((await rejected.startFromGesture()).code,"create-failed");
-assert.equal(rejected.snapshot().state,"error");
+assert.equal(rejected.snapshot().state,"needs-activation");
+assert.equal(rejected.snapshot().pending,true,"Failed model setup must retain the inspected pair for a manual retry");
+let retryCreateCount=0;
+const recoveredCreation=make({TranslatorCtor:{
+ availability:async()=>"available",
+ create(){
+  retryCreateCount++;
+  if(retryCreateCount===1)throw Error("temporary model setup error");
+  return Promise.resolve({translate:async()=> "traduzido",destroy(){}});
+ }
+}});
+await recoveredCreation.inspect("en","pt");
+assert.equal((await recoveredCreation.startFromGesture()).code,"create-failed");
+assert.equal(retryCreateCount,1);
+assert.equal(recoveredCreation.snapshot().pending,true);
+assert.equal((await recoveredCreation.startFromGesture()).code,"ready","Second trusted gesture can recover");
+assert.equal(retryCreateCount,2);
+recoveredCreation.reset();
+let rejectedPromiseCount=0;
+const rejectedPromise=make({TranslatorCtor:{
+ availability:async()=>"downloadable",
+ create(){
+  rejectedPromiseCount++;
+  if(rejectedPromiseCount===1)return Promise.reject(Error("download interrupted"));
+  return Promise.resolve({translate:async t=>t,destroy(){}});
+ }
+}});
+await rejectedPromise.inspect("en","pt");
+assert.equal((await rejectedPromise.startFromGesture()).code,"create-failed");
+assert.equal(rejectedPromise.snapshot().pending,true);
+assert.equal((await rejectedPromise.startFromGesture()).code,"ready");
+assert.equal(rejectedPromiseCount,2);
+rejectedPromise.reset();
+let invalidCount=0;
+const invalidFirst=make({TranslatorCtor:{
+ availability:async()=>"available",
+ create(){
+  invalidCount++;
+  return Promise.resolve(invalidCount===1?{notTranslator:true}:{translate:async t=>t,destroy(){}});
+ }
+}});
+await invalidFirst.inspect("en","pt");
+assert.equal((await invalidFirst.startFromGesture()).code,"invalid-session");
+assert.equal(invalidFirst.snapshot().pending,true);
+assert.equal((await invalidFirst.startFromGesture()).code,"ready");
+invalidFirst.reset();
+let rejectAfterReset;
+const abortedCreation=make({TranslatorCtor:{
+ availability:async()=>"available",
+ create:()=>new Promise((_,reject)=>{rejectAfterReset=reject})
+}});
+await abortedCreation.inspect("en","pt");
+const abortedStart=abortedCreation.startFromGesture();
+abortedCreation.reset();
+rejectAfterReset(Error("cancelled"));
+assert.equal((await abortedStart).code,"stale");
+assert.equal(abortedCreation.snapshot().pending,false,"Stale create failure must not resurrect model activation");
+assert.equal(abortedCreation.snapshot().state,"idle");
 const wrong=make({TranslatorCtor:{availability:async()=>"undefined",create(){return Promise.resolve({translate(){}})}}});
 assert.equal((await wrong.inspect("en","pt")).code,"unknown-availability");
 assert.equal(runtime.snapshot().state,"idle");

@@ -206,11 +206,13 @@ async function main(){
  }
  const mockScript=String.raw`
  (()=>{
-  const mock={availability:[],created:0,destroyed:0,requests:[]};
+  const mock={availability:[],created:0,destroyed:0,requests:[],setupAttempts:0,failSetupOnce:true};
   globalThis.__BGCT_TEST_MOCK=mock;
   globalThis.Translator={
    availability:async pair=>{mock.availability.push(pair);return "available"},
    create(options){
+    mock.setupAttempts++;
+    if(mock.failSetupOnce){mock.failSetupOnce=false;throw new Error("synthetic setup failure")}
     mock.created++;
     return Promise.resolve({
      translate(text,{signal}={}){
@@ -232,8 +234,18 @@ async function main(){
  await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.availability.length>0"),"browser on-device adapter availability probe");
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.created"),0,"Passive lesson load must never download a model");
  await until(async()=>await evaluate("document.querySelector('#bgct-candidate-panel .bgct-state').textContent==='Click to start translation'"),"visible manual model activation");
+ // The first gesture intentionally fails creating a model: user must be able
+ // to retry with another genuine click, without a new availability probe.
  await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').click()",true);
- await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.created===1"),"model created by in-page action");
+ await until(async()=>await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').textContent==='Retry model activation'"),"manual model setup retry label");
+ assert.equal(await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').disabled"),false);
+ assert.equal(await evaluate("document.querySelector('#bgct-candidate-panel .bgct-state').textContent"),"Could not start the translation model. Try again.");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.created"),0);
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.setupAttempts"),1);
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.availability.length"),1);
+ await evaluate("document.querySelector('#bgct-candidate-panel .bgct-start').click()",true);
+ await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.created===1"),"model created after trusted retry");
+ assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.setupAttempts"),2);
  await until(async()=>await isolated("globalThis.__BGCT_TEST_MOCK.requests.length>=1"),"first model translation request");
  assert.equal(await isolated("globalThis.__BGCT_TEST_MOCK.requests[0].text"),"Synthetic English caption");
 
@@ -267,7 +279,7 @@ async function main(){
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Tradução recuperada'"),"recovered translation on same cue");
  console.log("BGCT REAL BROWSER RETRY PASS — blank model result, localized error, manual retry, same model and recovered overlay.");
 
- console.log("BGCT REAL BROWSER TRANSLATION CONTRACT PASS — MV3 isolated world, simulated Translator, direct activation, cue cancellation, translated overlay.");
+ console.log("BGCT REAL BROWSER TRANSLATION CONTRACT PASS — MV3 isolated world, simulated Translator, manual setup recovery, cue cancellation, translated overlay.");
  // Restore original-language mode for SPA/fullscreen and route-cleanup checks.
  await evaluate("(()=>{const e=document.getElementById('bgct-candidate-target');e.value='en';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
  await until(async()=>await evaluate("document.getElementById('"+captionId+"').textContent==='Temporary translation failure'"),"return to same-language passthrough");

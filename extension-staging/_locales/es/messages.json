@@ -111,5 +111,13 @@
   "actionRetryTranslation": {
     "message": "Reintentar traducción",
     "description": "The user can retry the current caption after the browser model returns an error; no new model download."
+  },
+  "actionRetryModel": {
+    "message": "Reintentar activación del modelo",
+    "description": "In-page candidate extension activation retry; no automatic model creation."
+  },
+  "errorModelCreateFailed": {
+    "message": "No se pudo iniciar el modelo de traducción. Inténtalo de nuevo.",
+    "description": "In-page candidate extension activation retry; no automatic model creation."
   }
 }
